@@ -67,6 +67,7 @@ Take a manual backup before any deployment that carries a Flyway migration: Flyw
 
 ```sh
 deploy/scripts/publish-images.sh <ssh host>      # builds and pushes both images
+kubectl apply -f deploy/network-policy.yaml       # only the page's nginx may reach the backend
 kubectl apply -f deploy/backend.yaml -f deploy/frontend.yaml
 kubectl -n beconscient set image deploy/beconscient-backend backend=localhost:5000/beconscient-backend@<digest>
 kubectl -n beconscient set image deploy/beconscient-frontend nginx=localhost:5000/beconscient-frontend@<digest>
