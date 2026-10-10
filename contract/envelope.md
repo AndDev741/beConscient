@@ -78,7 +78,7 @@ Pairing response plaintext:
 { "device_id": "0192...", "device_name": "Phone", "fingerprint": "Q4XN-8T2C" }
 ```
 
-The **fingerprint** is the first 8 Crockford base32 characters of `SHA-256("beconscient-fp" || installation_id || SHA-256(secret))`, where `installation_id` is its canonical lowercase string. Both the page and the collector display it so the user can compare them.
+The **fingerprint** is the first 8 Crockford base32 characters of `SHA-256("beconscient-fp" || installation_id || SHA-256(secret))`, where `installation_id` is its canonical lowercase string and `SHA-256(secret)` hashes the 32 decoded secret bytes. Both the page and the collector display it so the user can compare them.
 
 Rules:
 

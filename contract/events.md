@@ -14,7 +14,7 @@ Contract version: **1**. This file owns the allowed fields of every event type. 
 | `tz` | string | Optional IANA zone of the device when the fact was observed (max 64). |
 | `tz_offset_min` | integer | Optional UTC offset in minutes at that instant. |
 
-Validation that rejects an event: missing `id`, `type` or time fields; `end < start`; a time more than 1 day in the future of the server clock (stored, but marked suspect and excluded from derivation); a string enum outside its list.
+Validation that rejects an event: missing `id`, `type` or time fields; `end < start`; a string enum outside its list. An event more than 1 day in the future of the server clock is not rejected: it is stored, marked suspect and excluded from derivation.
 
 ## Interval revisions
 

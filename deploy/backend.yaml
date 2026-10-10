@@ -1,0 +1,60 @@
+# The backend. Secrets are created out of band (README.md): beconscient-db,
+# beconscient-auth and beconscient-hpke. The image comes from the registry the
+# cluster pulls from; publish-images.sh sets the digest.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: beconscient-backend
+  namespace: beconscient
+spec:
+  replicas: 1
+  # Two pods must never derive at the same time (docs/design.md).
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels: { app: beconscient-backend }
+  template:
+    metadata:
+      labels: { app: beconscient-backend }
+    spec:
+      securityContext:
+        runAsNonRoot: true
+      containers:
+        - name: backend
+          image: localhost:5000/beconscient-backend:latest
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - secretRef: { name: beconscient-db }
+            - secretRef: { name: beconscient-auth }
+            - secretRef: { name: beconscient-hpke }
+          resources:
+            requests: { cpu: 100m, memory: 64Mi }
+            limits: { memory: 160Mi }
+          readinessProbe:
+            httpGet: { path: /q/health/ready, port: 8080 }
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /q/health/live, port: 8080 }
+            initialDelaySeconds: 20
+            periodSeconds: 20
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: beconscient-backend
+  namespace: beconscient
+spec:
+  selector: { app: beconscient-backend }
+  ports:
+    - port: 80
+      targetPort: 8080

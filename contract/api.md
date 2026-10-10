@@ -66,9 +66,9 @@ Login and pairing share a global rate limiter with exponential backoff capped at
 ```json
 {
   "period": "week",
-  "current": { "from": "2026-10-06", "to": "2026-10-10", "screenMinutes": 1900, "awayMinutes": 2900, "byCategory": [ ] },
-  "previous": { "from": "2026-09-29", "to": "2026-10-03", "screenMinutes": 2100, "awayMinutes": 2700, "byCategory": [ ] },
-  "series": [ { "date": "2026-10-06", "screenMinutes": 380, "awayMinutes": 580, "complete": true } ]
+  "current": { "from": "2026-10-05", "to": "2026-10-10", "screenMinutes": 1900, "awayMinutes": 2900, "byCategory": [ ] },
+  "previous": { "from": "2026-09-28", "to": "2026-10-03", "screenMinutes": 2100, "awayMinutes": 2700, "byCategory": [ ] },
+  "series": [ { "date": "2026-10-05", "screenMinutes": 380, "awayMinutes": 580, "complete": true } ]
 }
 ```
 

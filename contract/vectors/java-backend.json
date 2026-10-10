@@ -1,0 +1,42 @@
+[
+  {
+    "producer": "java-backend",
+    "kid": "test-0001",
+    "purpose": "batch",
+    "info": "beconscient/v1/batch",
+    "plaintext": "{\"header\":{\"installation_id\":\"0192f3a0-1c2b-7cde-8f00-112233445566\",\"credential\":\"AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8\",\"seq\":1,\"sent_at\":1760090000123,\"tz\":\"Europe/Lisbon\",\"tz_offset_min\":60,\"contract_version\":1,\"client_version\":\"0.0.0-test\"},\"events\":[{\"id\":\"0192f3a1-0000-7000-8000-000000000001\",\"type\":\"android.usage\",\"at\":1760089000000,\"kind\":\"ACTIVITY_RESUMED\",\"package\":\"com.example.app\",\"class\":\"com.example.app.MainActivity\"}]}",
+    "request": {
+      "v": 1,
+      "kid": "test-0001",
+      "enc": "3kf3vfU_bCF43YNyKQZLfBWS9s3Oq-TybWAKwCvIL2g",
+      "ct": "189nIkoUtlIbL0oXOTSetvbLVYozHfLBYm7FGPncucBZmkFwjjNduJKCfXruaiprR5s1lADTP2G5SSOWZUZO-iDqp5Drz4tdbkKQ4b2Sof3Dk_gyIidcwedgRSnVqnjXEaEgKdlwhe5TaM2fVECSJoqhowI7ymTNDeILd3BF9nBVU3cwtOOLUClyaH7RH2o8S8E5VqONIQl1GVIfkvTtdv73jHvPcuu7N-NW6G1r4Q1dvImVFREvWoMWMtxexQCi6BGl8CgYS6c1cYP8yk5RVLBABs9lw7kD5OOsTq72Di1KKAGop-cqJOVwSr0FfwcgTelYHym133m16iFl5hiTZczHKO7Q_K8wwzqNa80EphV8Pq5BAmyqQ0vAgfV67OEUPARDku0HCRhBlRxto61lOs6I8-ZTExhhkInuq-dGOo49VEODlu_mENhrOZBVTzsiPpS0-BSKfhLn5Y9jOvqP9HgpjnCkllFXKsfOZWgLmNT0KS7QspEHeFp2DmpEuSlwkBtr0QaGS06hNpLOMbLpieAOSqM2e8-Ptnn4wGdcLrz2fEg2NIgCSqu9guPL7PsmiLJ55Xq0DAModLDMtyZNSghLKlIjZ64Q0wf_"
+    },
+    "response_key": "e2xQua1Xchd0LUx-oQNQkPGOCvjiM7HNua2Ii-MES5Y",
+    "response_plaintext": "{\"installation_id\":\"0192f3a0-1c2b-7cde-8f00-112233445566\",\"seq\":1,\"results\":[{\"id\":\"0192f3a1-0000-7000-8000-000000000001\",\"status\":\"accepted\"}]}",
+    "response": {
+      "v": 1,
+      "ct": "EaQ0iMhWrz5cW3AtD2LIiSUFjSgZGBkm8TmBg_3hqY3HhDsR0JCqqlgtcwh9nJAh41jRTzZ7MvSBDGglTKb7AMmetgrdOrsYUxNzV832VjzVmxQmDGtDhBGjPjYFRXZI9lFX8R8yTyZOn_moTy73yaRBguN5_2Vm75DBtdz45QcjPmrz1H-M_xSgf4Cc5oEL6WBkSx5mSqQrf86o7lwdAw",
+      "nonce": "-I55RCR0W_hzXdr4"
+    }
+  },
+  {
+    "producer": "java-backend",
+    "kid": "test-0001",
+    "purpose": "pair",
+    "info": "beconscient/v1/pair",
+    "plaintext": "{\"code\":\"7KQ2-M9XD\",\"installation_id\":\"0192f3a0-1c2b-7cde-8f00-112233445566\",\"secret\":\"AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8\",\"kind\":\"desktop\",\"name\":\"Test desktop\",\"client_version\":\"0.0.0-test\"}",
+    "request": {
+      "v": 1,
+      "kid": "test-0001",
+      "enc": "nqfbw9NOQmbJytxvzuGRqanHPLt1eSw-de_ieHGCizU",
+      "ct": "uaj2OKsn7l_I5Kz5nMpgVIJCyFfI0nIeJO8WQQaLPQg4k4F239TjIFP9ImV6DDAhIKmrTOaPIMGsEP-aO_m9yLDXZvfQwOnhgsxTod-foraIs1Z6iJF0Gvu1VxpWlt8oha85sM_A0J9zaaqm9Wytnx09Ow0HJ1_8E1OhsjNK9TVQICHB7onoXZcUJ0CdVWQ7ykEK0pIel09SvWzKRxjN8oAC9-eJStfxX_Vao7TiONY7I1znf2NUVZXk-WDLD7w6Gpx8ylc_8LImlDleeg-0SrrRlhsULK7HRw"
+    },
+    "response_key": "VvCtdxcWZTmMqtTizhj9db98FuvoizfiBiZbDSgAfPo",
+    "response_plaintext": "{\"device_id\":\"0192f3a0-0000-7000-8000-0000000000aa\",\"device_name\":\"Test desktop\",\"fingerprint\":\"AWJC-42F0\"}",
+    "response": {
+      "v": 1,
+      "ct": "dpBrxWmyv5tnvOxzDc6mz1hl1_2DTXNQZQkjxyEGGlY7skPrWejaG6OU-G_p7pcjOrvKgqecn1knMHwJ9FwEwXFsJspHWVkJSkP_mX0Ox43f_UtoNQHOMzV8PRjC_2y5zgW-6a4RrQ4I8Xc8Ac6mNCWdL-r7OiI0bZXZ",
+      "nonce": "MNN3kakKD4deZfVR"
+    }
+  }
+]

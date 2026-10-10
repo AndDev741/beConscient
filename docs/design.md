@@ -54,7 +54,7 @@ Raw events are the source of truth. Screen-time segments are a projection that c
 - The scheduled derivation never overlaps itself, and the backend deploys with the `Recreate` strategy so two pods never derive at once.
 - Each segment carries the derivation version. A version bump triggers a resumable background rebuild, block by block. While it runs, the page shows "recalculating" with progress. A process with an older version refuses to write.
 - Segments are stored in UTC. The local day is computed when reading.
-- Suspect events (more than 1 day in the future, or more than 10 days before the sensor's coverage start) are kept but excluded from derivation and never widen a dirty range.
+- Suspect events (more than 1 day in the future, or more than 10 days before the server first heard from that sensor) are kept but excluded from derivation and never widen a dirty range.
 - Excluded events (see corrections) are skipped by derivation.
 
 ### Phone rules
@@ -107,7 +107,7 @@ stateDiagram-v2
 - **Incomplete day**: a health gap (see `contract/events.md`) inside the awake window marks the day incomplete and names the silent sensor.
 - **Closed day**: a past day is closed when every active installation has caught up: its acknowledged watermark passed the end of that local day, or its last health record before that end reported an expected stop with an empty queue. Revoked installations never hold a day open. Validation only needs the phone to have caught up.
 - **Day zone**: each instant takes the phone's zone in effect at that time (from `android.tz_change` markers and batch headers), with `Europe/Lisbon` as fallback.
-- **Coverage**: the server records when each sensor first reported. Trends and validation skip days before it. On first pairing the phone back-fills about 7 days of usage history; notifications and Shorts start from zero.
+- **Coverage**: the server records, per sensor, when it first heard from it and the earliest event time it holds. Partial days are those before the earliest event time. Trends and validation skip days before it. On first pairing the phone back-fills about 7 days of usage history; notifications and Shorts start from zero.
 
 ## Health
 
@@ -116,4 +116,4 @@ stateDiagram-v2
 
 ## Backups
 
-The database lives in a Postgres instance shared with another application on the same cluster, with its own database and role. A Kubernetes CronJob dumps each database with `pg_dump -Fc` (derived segments are excluded) and stores the dumps with restic in an object-storage bucket. restic encrypts on the server. A weekly CronJob restores the latest snapshot into a scratch database and compares row counts. Collectors keep acknowledged events for 14 days and can resend them after a restore.
+The database lives in a Postgres instance shared with another application on the same cluster, with its own database and role. A Kubernetes CronJob dumps each database with `pg_dump -Fc` and stores the dumps with restic in an object-storage bucket. restic encrypts on the server. A weekly CronJob restores the latest snapshot into a scratch database and compares row counts. Collectors keep acknowledged events for 14 days and can resend them after a restore.

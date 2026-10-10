@@ -1,0 +1,28 @@
+####
+# The documented fallback: the same service on a JVM, for when the native image
+# cannot be built or misbehaves. It needs more memory (raise the pod limit to
+# about 384Mi) but behaves identically.
+#
+#   ./mvnw package -DskipTests
+#   docker build -f src/main/docker/Dockerfile.jvm -t beconscient-backend-jvm .
+#   docker run -p 8080:8080 --env-file prod.env beconscient-backend-jvm
+#
+# The image holds no secret. Without BECONSCIENT_SESSION_KEY,
+# BECONSCIENT_OWNER_PASSWORD and BECONSCIENT_HPKE_KEYS it refuses to start.
+###
+FROM registry.access.redhat.com/ubi9/openjdk-25-runtime:1.24
+
+ENV LANGUAGE='en_US:en'
+
+# Four layers, so a code change only rebuilds the last ones
+COPY --chown=185 target/quarkus-app/lib/ /deployments/lib/
+COPY --chown=185 target/quarkus-app/*.jar /deployments/
+COPY --chown=185 target/quarkus-app/app/ /deployments/app/
+COPY --chown=185 target/quarkus-app/quarkus/ /deployments/quarkus/
+
+EXPOSE 8080
+USER 185
+ENV JAVA_OPTS_APPEND="-Dquarkus.http.host=0.0.0.0 -Djava.util.logging.manager=org.jboss.logmanager.LogManager"
+ENV JAVA_APP_JAR="/deployments/quarkus-run.jar"
+
+ENTRYPOINT [ "/opt/jboss/container/java/run/run-java.sh" ]

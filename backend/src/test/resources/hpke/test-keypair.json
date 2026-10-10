@@ -1,0 +1,7 @@
+{
+  "kid": "test-0001",
+  "suite": "DHKEM(X25519,HKDF-SHA256)/HKDF-SHA256/ChaCha20Poly1305",
+  "public_key": "y8OzVaM2hnilfWsxNBWGHCufC6d3x4qoX1CXPhGhy3A",
+  "private_key": "nYNDYllPBHkfmKXb0PQuChcVm_u_GLtBh8iES4Y23Ls",
+  "test_only": true
+}
