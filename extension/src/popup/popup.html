@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="color-scheme" content="light dark" />
+    <title>beConscient</title>
+    <style>
+      :root {
+        --bg: #ffffff;
+        --fg: #1d1d1f;
+        --muted: #6e6e73;
+        --ok: #1a7f37;
+        --bad: #b42318;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #1c1c1e;
+          --fg: #f2f2f7;
+          --muted: #a1a1a6;
+          --ok: #4ac26b;
+          --bad: #ff7b72;
+        }
+      }
+      body {
+        margin: 0;
+        padding: 12px 14px;
+        min-width: 240px;
+        background: var(--bg);
+        color: var(--fg);
+        font: 13px/1.4 system-ui, sans-serif;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 14px;
+      }
+      dl {
+        margin: 0;
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 4px 10px;
+      }
+      dt {
+        color: var(--muted);
+      }
+      dd {
+        margin: 0;
+      }
+      .ok {
+        color: var(--ok);
+      }
+      .bad {
+        color: var(--bad);
+      }
+      #error {
+        margin-top: 8px;
+        color: var(--muted);
+        word-break: break-word;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>beConscient</h1>
+    <dl>
+      <dt>Agent</dt>
+      <dd id="agent">checking</dd>
+      <dt>Last heartbeat sent</dt>
+      <dd id="heartbeat">never</dd>
+    </dl>
+    <div id="error"></div>
+    <script src="popup.js"></script>
+  </body>
+</html>

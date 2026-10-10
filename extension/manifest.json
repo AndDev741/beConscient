@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "beConscient",
+  "version": "0.1.0",
+  "description": "Measures time on YouTube and LinkedIn for the beConscient desktop agent. Sends no URLs.",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAyB+nV8XuzG1fYo/udwaaCAcZ0iZH3qfRRJL5Jr/EpbIn0+1iQQZ3+JqovVmVti6K0mpOwzuVuwoBzlWxuzefstKNm7QAsEeLZWDRrOTJ6x0KcZY7mU5peAjfk569g1ZKtErDhtk5ZpRqu8FblHYMfEfKmCeEtjwdiZMLZH2Y81UWORaXdf5OAvDTZXEqSbNNoFjWFB5fpZS2syBmiRZUblzGBbKj523qkEY+MOut19ja3PWGeFPjRumYLbDHFUjVr6A79/GuhcwxkFPgEH3HgLnHsxobiRZJ0PpiiQh3cpTJk7HQCfgXCVDMD7MsOJu+Jf1dHZR29zSRt7GzD6eq8QIDAQAB",
+  "minimum_chrome_version": "116",
+  "permissions": ["nativeMessaging", "storage", "alarms"],
+  "host_permissions": ["https://www.youtube.com/*", "https://www.linkedin.com/*"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://www.youtube.com/*"],
+      "js": ["content/youtube.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://www.linkedin.com/*"],
+      "js": ["content/linkedin.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_title": "beConscient",
+    "default_popup": "popup/popup.html"
+  }
+}
