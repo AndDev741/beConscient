@@ -4,6 +4,8 @@ The web page talks to the backend under `/api/*`. Every endpoint except login, s
 
 Errors: `{ "error": "<code>", "message": "<human text>" }` with a matching HTTP status.
 
+Every timestamp in requests and responses (for example `createdAt`, `expiresAt`, `lastSeenAt`, `lastContact`, correction `from` and `to`) is epoch milliseconds.
+
 ## Session
 
 | Method | Path | Body | Response |
@@ -40,7 +42,8 @@ Login and pairing share a global rate limiter with exponential backoff capped at
   },
   "byCategory": [ { "categoryId": "…", "name": "Work", "color": "#5b6cff", "minutes": 120 } ],
   "hours": [
-    { "label": "09:00", "start": 1760083200000, "byCategory": [ { "categoryId": "…", "minutes": 45 } ] }
+    { "label": "09:00", "start": 1760083200000, "byCategory": [ { "categoryId": "…", "minutes": 45 } ],
+      "segments": [ { "id": "…", "label": "com.whatsapp", "minutes": 12 } ] }
   ],
   "topSubjects": [ { "subjectKey": "app:com.whatsapp", "label": "com.whatsapp", "categoryId": "…", "minutes": 41 } ],
   "unlocks": { "count": 57, "firstApps": [ { "subjectKey": "app:com.whatsapp", "label": "com.whatsapp", "count": 19 } ] },
@@ -50,7 +53,8 @@ Login and pairing share a global rate limiter with exponential backoff capped at
 
 - `state`: `open` (today), `arriving` (a past day not yet closed: some device has not caught up), `closed`.
 - `headline.elapsedOnly`: true for today. Only awake hours that already passed count.
-- `headline.incomplete` and `silentSensors` (sensor names with device names) follow the health-gap rule in `events.md`.
+- `headline.incomplete` and `silentSensors` follow the health-gap rule in `events.md`. Each silent sensor is a display string, `"<sensor> (<device name>)"`.
+- `hours[].segments` lists the top 20 segments of the hour by minutes, so the page can open a trace.
 - `hours` has one entry per local hour; a day with a daylight-saving change has 23 or 25 entries.
 - `totals.screenMinutes` is the union across devices. In `byCategory` and `hours`, overlapping time is attributed to the phone.
 - Built-in categories: `Work`, `Personal computer`, `Uncategorized` (an app or site without a mapping) and `Unattributed` (phone screen on and unlocked with no attributable app).
@@ -110,7 +114,7 @@ The pairing code is shown once. `GET /api/pairing-codes/state` returns `{ "locke
 {
   "workWindow": { "days": [1,2,3,4,5], "start": "09:00", "end": "18:00", "validFrom": "2026-10-10" },
   "awakeWindow": { "start": "07:00", "end": "23:00", "validFrom": "2026-10-10" },
-  "history": [ { "kind": "work", "value": { }, "validFrom": "2026-10-10" } ],
+  "history": [ { "kind": "work", "value": { "days": [1,2,3,4,5], "start": "09:00", "end": "18:00" }, "validFrom": "2026-10-10" } ],
   "nonWorkdays": [ "2026-12-25" ]
 }
 ```
@@ -134,7 +138,7 @@ The pairing code is shown once. `GET /api/pairing-codes/state` returns `{ "locke
       "duplicates": 12, "rejected": 0, "droppedFields": 0, "intervalConflicts": 0,
       "invariantViolations": 0, "clockSkewMs": 1200,
       "gaps": [ { "sensor": "usage", "from": 1760000000000, "to": 1760003600000, "expected": false } ],
-      "shorts": { "unconfirmedSinceVersion": null, "lastConfirmedVersion": "19.40.33" }
+      "shorts": { "unconfirmedSinceVersion": null, "unconfirmedSince": null, "lastConfirmedVersion": "19.40.33" }
     }
   ],
   "database": { "sizeBytes": 123456789, "budgetBytes": 10737418240 },
@@ -145,7 +149,15 @@ The pairing code is shown once. `GET /api/pairing-codes/state` returns `{ "locke
 
 Sensor states: `active`, `expected_stop`, `late`, `stopped` (permission or service off), `silent` (no health record beyond the gap rule).
 
-`GET /api/backstage/trace?segmentId=…` returns the raw events behind one segment and the rules that produced it.
+`GET /api/backstage/trace?segmentId=…` returns the raw events behind one segment and the rules that produced it:
+
+```json
+{
+  "segment": { "id": "…", "deviceId": "…", "subjectKey": "app:com.whatsapp", "label": "com.whatsapp", "categoryId": "…", "start": 1760089001000, "end": 1760089301000, "derivationVersion": 1 },
+  "events": [ { "id": "…", "type": "android.usage", "at": 1760089001000, "kind": "ACTIVITY_RESUMED", "package": "com.whatsapp" } ],
+  "rules": [ "Clipped to screen on and unlocked", "Merged intervals 2 s apart" ]
+}
+```
 
 ## Validation
 
@@ -154,13 +166,13 @@ Sensor states: `active`, `expected_stop`, `late`, `stopped` (permission or servi
 | GET | `/api/validation?from=&to=` | | `[ { "date", "closed", "measuredMinutes", "rawMinutes", "settingsMinutes", "diffPct", "flagged" } ]` |
 | PUT | `/api/validation/{date}` | `{ "minutes": 245 }` | row, or 409 `day_not_closed` |
 
-`flagged` is true when `|measured − settings| / settings > 10%`. The flag is recomputed on every read. Only closed days accept input, and a day closes for validation when the phone has caught up.
+`diffPct` is the signed percentage `(measured − settings) / settings × 100`, or null without a Settings value. `flagged` is true when `|diffPct| > 10`. The flag is recomputed on every read. Only closed days accept input, and a day closes for validation when the phone has caught up.
 
 ## Corrections
 
 | Method | Path | Body | Response |
 |---|---|---|---|
-| GET | `/api/corrections` | | `{ "redactions": [ ], "exclusions": [ ] }` |
+| GET | `/api/corrections` | | `{ "redactions": [ { "id", "deviceId", "type", "from", "to", "field", "createdAt" } ], "exclusions": [ { "id", "deviceId", "type", "from", "to", "note", "createdAt" } ] }` (`field` null means the events were deleted) |
 | POST | `/api/corrections/redactions` | `{ "deviceId", "type", "from", "to", "field" }` (`field` null deletes the events) | audit row |
 | POST | `/api/corrections/exclusions` | `{ "deviceId", "type", "from", "to", "note" }` | exclusion |
 | DELETE | `/api/corrections/exclusions/{id}` | | 204 |
