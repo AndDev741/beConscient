@@ -1,0 +1,184 @@
+# Nightly encrypted backup of both databases in the shared Postgres, and a
+# weekly restore drill. restic encrypts on the cluster before anything reaches
+# the object store; the restic password must also be kept outside the cluster
+# (a password manager), or a lost disk loses the backup too.
+#
+# Secret beconscient-backup (created out of band, see README.md):
+#   PGHOST                                  the shared Postgres service
+#   PGUSER, PGPASSWORD                      backup role (pg_read_all_data)
+#   RESTIC_REPOSITORY, RESTIC_PASSWORD      restic repository and its password
+#   AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY  object-store credentials
+#   DATABASES                               space-separated list, e.g. "beconscient other"
+#   EXCLUDE_TABLE_DATA                      space-separated table patterns whose data is
+#                                           rebuilt from raw events (beconscient only)
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: backup
+  namespace: beconscient
+spec:
+  schedule: "40 3 * * *"
+  timeZone: Europe/Lisbon
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 5
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      activeDeadlineSeconds: 1800
+      template:
+        spec:
+          restartPolicy: Never
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 70
+            runAsGroup: 70
+            fsGroup: 70
+          volumes:
+            - name: dumps
+              emptyDir: {}
+            - name: cache
+              emptyDir: {}
+          initContainers:
+            - name: dump
+              image: postgres:17-alpine
+              envFrom:
+                - secretRef:
+                    name: beconscient-backup
+              command: ["/bin/sh", "-ec"]
+              args:
+                - |
+                  for db in $DATABASES; do
+                    excludes=""
+                    if [ "$db" = beconscient ]; then
+                      for t in $EXCLUDE_TABLE_DATA; do excludes="$excludes --exclude-table-data=$t"; done
+                    fi
+                    pg_dump -Fc $excludes -d "$db" -f "/dumps/$db.dump"
+                    echo "dumped $db: $(wc -c < "/dumps/$db.dump") bytes"
+                  done
+              volumeMounts:
+                - name: dumps
+                  mountPath: /dumps
+              resources:
+                requests: { cpu: 50m, memory: 32Mi }
+                limits: { memory: 128Mi }
+          containers:
+            - name: restic
+              image: restic/restic:0.18.1
+              envFrom:
+                - secretRef:
+                    name: beconscient-backup
+              env:
+                - name: RESTIC_CACHE_DIR
+                  value: /cache
+              command: ["/bin/sh", "-ec"]
+              args:
+                - |
+                  restic cat config >/dev/null 2>&1 || restic init
+                  restic backup /dumps --host beconscient-backup --tag k3s-postgres
+                  restic forget --host beconscient-backup --tag k3s-postgres \
+                    --keep-daily 7 --keep-weekly 4 --keep-monthly 6 --prune
+                  restic snapshots --host beconscient-backup --latest 1
+              volumeMounts:
+                - name: dumps
+                  mountPath: /dumps
+                  readOnly: true
+                - name: cache
+                  mountPath: /cache
+              resources:
+                requests: { cpu: 50m, memory: 64Mi }
+                limits: { memory: 256Mi }
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: restore-check
+  namespace: beconscient
+spec:
+  schedule: "15 4 * * 0"
+  timeZone: Europe/Lisbon
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 5
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      activeDeadlineSeconds: 1800
+      template:
+        spec:
+          restartPolicy: Never
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 70
+            runAsGroup: 70
+            fsGroup: 70
+          volumes:
+            - name: restore
+              emptyDir: {}
+            - name: cache
+              emptyDir: {}
+          initContainers:
+            - name: fetch
+              image: restic/restic:0.18.1
+              envFrom:
+                - secretRef:
+                    name: beconscient-backup
+              env:
+                - name: RESTIC_CACHE_DIR
+                  value: /cache
+              command: ["/bin/sh", "-ec"]
+              args:
+                - restic restore latest --host beconscient-backup --tag k3s-postgres --target /restore
+              volumeMounts:
+                - name: restore
+                  mountPath: /restore
+                - name: cache
+                  mountPath: /cache
+          containers:
+            # Restores every dump into a throwaway Postgres inside this pod (never
+            # into the live shared instance) and compares row counts with the live
+            # databases. Live counts may have grown since the dump; a table that is
+            # missing, or empty while live has rows, fails the drill.
+            - name: drill
+              image: postgres:17-alpine
+              envFrom:
+                - secretRef:
+                    name: beconscient-backup
+              command: ["/bin/sh", "-ec"]
+              args:
+                - |
+                  export PGDATA=/tmp/pgdata
+                  initdb -D "$PGDATA" -U drill --auth=trust >/dev/null
+                  pg_ctl -D "$PGDATA" -o "-c listen_addresses='' -k /tmp" -w start >/dev/null
+                  failures=0
+                  for db in $DATABASES; do
+                    dump=$(find /restore -name "$db.dump" | head -n1)
+                    if [ -z "$dump" ] || [ ! -s "$dump" ]; then echo "MISSING dump for $db"; failures=$((failures+1)); continue; fi
+                    scratch="${db}_restorecheck"
+                    createdb -h /tmp -U drill "$scratch"
+                    pg_restore --no-owner --no-privileges -h /tmp -U drill -d "$scratch" "$dump" || echo "WARN pg_restore reported errors for $db"
+                    excluded=""
+                    [ "$db" = beconscient ] && excluded="$EXCLUDE_TABLE_DATA"
+                    tables=$(PGPASSWORD="$PGPASSWORD" psql -h "$PGHOST" -U "$PGUSER" -d "$db" -Atc \
+                      "select quote_ident(schemaname)||'.'||quote_ident(relname) from pg_stat_user_tables order by 1")
+                    for t in $tables; do
+                      skip=no
+                      for p in $excluded; do case "${t#*.}" in $p) skip=yes ;; esac; done
+                      restored=$(psql -h /tmp -U drill -d "$scratch" -Atc "select count(*) from $t" 2>/dev/null || echo absent)
+                      if [ "$restored" = absent ]; then echo "MISSING  $db $t"; failures=$((failures+1)); continue; fi
+                      [ "$skip" = yes ] && { echo "skipped  $db $t (data rebuilt from raw events)"; continue; }
+                      live=$(PGPASSWORD="$PGPASSWORD" psql -h "$PGHOST" -U "$PGUSER" -d "$db" -Atc "select count(*) from $t")
+                      if [ "$live" -gt 0 ] && [ "$restored" -eq 0 ]; then echo "EMPTY    $db $t live=$live"; failures=$((failures+1));
+                      else echo "ok       $db $t live=$live restored=$restored"; fi
+                    done
+                  done
+                  pg_ctl -D "$PGDATA" -m fast stop >/dev/null
+                  if [ "$failures" -gt 0 ]; then echo "FAIL: $failures problem(s); the backup is not trustworthy"; exit 1; fi
+                  echo "PASS"
+              volumeMounts:
+                - name: restore
+                  mountPath: /restore
+                  readOnly: true
+              resources:
+                requests: { cpu: 50m, memory: 64Mi }
+                limits: { memory: 384Mi }

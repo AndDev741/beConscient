@@ -7,6 +7,7 @@ The single source of truth for everything that crosses a component boundary. Eve
 | [`envelope.md`](envelope.md) | HPKE envelope, pairing, batches, receipts, resend rules. |
 | [`events.md`](events.md) | Event types and their allowed fields. |
 | [`api.md`](api.md) | The page API under `/api/*`. |
+| [`native-messaging.md`](native-messaging.md) | Messages between the browser extension and the desktop agent. |
 | [`fixtures/`](fixtures) | Example events: `valid.json` must be accepted as is; `forbidden.json` lists events whose disallowed fields must be dropped or which must be rejected, with the expected outcome. |
 | [`vectors/`](vectors) | Envelope test vectors, one file per producer. |
 | [`keys/`](keys) | The **test-only** key pair. It is public on purpose. Production refuses its kid. |
