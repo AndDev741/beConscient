@@ -1,0 +1,15 @@
+[
+  { "id": "0192f3a1-0000-7000-8000-000000000001", "type": "android.usage", "at": 1760089000000, "kind": "SCREEN_INTERACTIVE" },
+  { "id": "0192f3a1-0000-7000-8000-000000000002", "type": "android.usage", "at": 1760089000500, "kind": "KEYGUARD_HIDDEN" },
+  { "id": "0192f3a1-0000-7000-8000-000000000003", "type": "android.usage", "at": 1760089001000, "kind": "ACTIVITY_RESUMED", "package": "com.whatsapp", "class": "com.whatsapp.HomeActivity", "instance": 7 },
+  { "id": "0192f3a1-0000-7000-8000-000000000004", "type": "android.usage", "at": 1760089301000, "kind": "ACTIVITY_PAUSED", "package": "com.whatsapp", "class": "com.whatsapp.HomeActivity", "instance": 7 },
+  { "id": "0192f3a1-0000-7000-8000-000000000005", "type": "android.usage", "at": 1760089302000, "kind": "SCREEN_NON_INTERACTIVE" },
+  { "id": "0192f3a1-0000-7000-8000-000000000006", "type": "android.tz_change", "at": 1760088000000, "zone": "Europe/Lisbon", "offset_min": 60, "reason": "INITIAL" },
+  { "id": "0192f3a1-0000-7000-8000-000000000007", "type": "android.notification_posted", "at": 1760089100000, "package": "com.whatsapp", "ref": "5d3c2b1a-0000-4000-8000-000000000001", "is_update": false, "is_group_summary": false, "is_ongoing": false, "importance": 4, "category": "msg" },
+  { "id": "0192f3a1-0000-7000-8000-000000000008", "type": "android.notification_removed", "at": 1760089120000, "package": "com.whatsapp", "ref": "5d3c2b1a-0000-4000-8000-000000000001", "reason": "click", "posted_at": 1760089100000 },
+  { "id": "0192f3a1-0000-7000-8000-000000000009", "type": "android.shorts", "at": 1760089400000, "state": "enter", "youtube_version": "19.40.33", "youtube_version_code": 1549000000, "rules_version": 1 },
+  { "id": "0192f3a1-0000-7000-8000-00000000000a", "type": "desktop.activity", "start": 1760083200000, "end": 1760086800000, "rev": 3, "reason": "input", "tz": "Europe/Lisbon", "tz_offset_min": 60 },
+  { "id": "0192f3a1-0000-7000-8000-00000000000b", "type": "browser.site", "start": 1760090000000, "end": 1760091200000, "rev": 2, "site": "youtube", "browser": "chrome", "playing": true, "title": "A video title", "tz": "Europe/Lisbon", "tz_offset_min": 60 },
+  { "id": "0192f3a1-0000-7000-8000-00000000000c", "type": "browser.site", "start": 1760091300000, "end": 1760091600000, "rev": 1, "site": "linkedin", "browser": "brave", "playing": false, "page_kind": "feed", "tz": "Europe/Lisbon", "tz_offset_min": 60 },
+  { "id": "0192f3a1-0000-7000-8000-00000000000d", "type": "health", "at": 1760089900000, "client_version": "0.1.0", "sensors": { "usage": { "state": "ok", "last_event_at": 1760089302000 }, "notifications": { "state": "ok" }, "shorts": { "state": "disabled", "detail": "accessibility service off" }, "battery_exemption": { "state": "ok" } }, "watermark": 1760089302000, "queue_depth": 0, "oldest_unsent_age_ms": 0, "home_package": "com.google.android.apps.nexuslauncher" }
+]

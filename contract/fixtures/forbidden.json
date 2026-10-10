@@ -1,0 +1,16 @@
+[
+  { "case": "notification title is dropped", "expect": "accepted_without", "fields": ["title", "text", "key"],
+    "event": { "id": "0192f3a1-0000-7000-8000-000000000101", "type": "android.notification_posted", "at": 1760089100000, "package": "com.whatsapp", "ref": "5d3c2b1a-0000-4000-8000-000000000101", "is_update": false, "is_group_summary": false, "is_ongoing": false, "title": "Maria", "text": "hi", "key": "0|com.whatsapp|1|x|10123" } },
+  { "case": "linkedin title is dropped", "expect": "accepted_without", "fields": ["title"],
+    "event": { "id": "0192f3a1-0000-7000-8000-000000000102", "type": "browser.site", "start": 1760091300000, "end": 1760091600000, "rev": 1, "site": "linkedin", "browser": "chrome", "playing": false, "page_kind": "profile", "title": "Jane Doe | LinkedIn" } },
+  { "case": "desktop window title and url are dropped", "expect": "accepted_without", "fields": ["window_title", "app", "url"],
+    "event": { "id": "0192f3a1-0000-7000-8000-000000000103", "type": "desktop.activity", "start": 1760083200000, "end": 1760083500000, "rev": 1, "reason": "input", "window_title": "Client X - Jira", "app": "code", "url": "https://internal.example" } },
+  { "case": "other sites are rejected", "expect": "rejected", "reason": "invalid_enum",
+    "event": { "id": "0192f3a1-0000-7000-8000-000000000104", "type": "browser.site", "start": 1760091300000, "end": 1760091600000, "rev": 1, "site": "example.com", "browser": "chrome", "playing": false } },
+  { "case": "end before start is rejected", "expect": "rejected", "reason": "end_before_start",
+    "event": { "id": "0192f3a1-0000-7000-8000-000000000105", "type": "desktop.activity", "start": 1760083500000, "end": 1760083200000, "rev": 1, "reason": "input" } },
+  { "case": "unknown type is rejected", "expect": "rejected", "reason": "unknown_type",
+    "event": { "id": "0192f3a1-0000-7000-8000-000000000106", "type": "android.location", "at": 1760089000000 } },
+  { "case": "linkedin page kind outside the list is rejected", "expect": "rejected", "reason": "invalid_enum",
+    "event": { "id": "0192f3a1-0000-7000-8000-000000000107", "type": "browser.site", "start": 1760091300000, "end": 1760091600000, "rev": 1, "site": "linkedin", "browser": "chrome", "playing": false, "page_kind": "company-acme" } }
+]
