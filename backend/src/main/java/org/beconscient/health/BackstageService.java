@@ -129,6 +129,12 @@ public class BackstageService {
                 continue;
             }
             JsonNode s = e.getValue();
+            // A browser extension that never sent a heartbeat is a browser the owner does not use
+            if (e.getKey().startsWith("extension_")
+                    && (s == null || "unknown".equals(s.path("state").asText("unknown")))
+                    && !hasEverReported(s)) {
+                continue;
+            }
             String detail = s == null ? "not reported by the collector"
                     : s.hasNonNull("detail") ? s.get("detail").asText() : null;
             // A sensor the collector does not report at all is as good as switched off
@@ -149,6 +155,10 @@ public class BackstageService {
             out.add(new Dto.SensorStatus(e.getKey(), state, latest.ts(), detail));
         }
         return out;
+    }
+
+    private static boolean hasEverReported(JsonNode s) {
+        return s != null && s.hasNonNull("last_event_at");
     }
 
     /**
