@@ -1,0 +1,9 @@
+{
+  "name": "org.beconscient.agent",
+  "description": "beConscient desktop agent",
+  "path": "@BINARY@",
+  "type": "stdio",
+  "allowed_origins": [
+    "chrome-extension://hhddmdmnpejagnnmenjdgdifpimneeok/"
+  ]
+}

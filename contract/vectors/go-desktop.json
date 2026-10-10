@@ -1,0 +1,42 @@
+[
+  {
+    "producer": "go-desktop",
+    "kid": "test-0001",
+    "purpose": "batch",
+    "info": "beconscient/v1/batch",
+    "plaintext": "{\"header\":{\"installation_id\":\"0192f3a0-1c2b-7cde-8f00-112233445566\",\"credential\":\"AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8\",\"seq\":1,\"sent_at\":1760090000123,\"tz\":\"Europe/Lisbon\",\"tz_offset_min\":60,\"contract_version\":1,\"client_version\":\"0.1.0\"},\"events\":[{\"id\":\"0192f3a1-0000-7000-8000-0000000000d1\",\"type\":\"desktop.activity\",\"start\":1760083200000,\"end\":1760086800000,\"rev\":3,\"reason\":\"input\",\"tz\":\"Europe/Lisbon\",\"tz_offset_min\":60},{\"id\":\"0192f3a1-0000-7000-8000-0000000000d2\",\"type\":\"browser.site\",\"start\":1760087000000,\"end\":1760088200000,\"rev\":2,\"site\":\"youtube\",\"browser\":\"chrome\",\"playing\":true,\"title\":\"A video title\",\"tz\":\"Europe/Lisbon\",\"tz_offset_min\":60},{\"id\":\"0192f3a1-0000-7000-8000-0000000000d3\",\"type\":\"health\",\"at\":1760090000000,\"tz\":\"Europe/Lisbon\",\"tz_offset_min\":60,\"client_version\":\"0.0.0-test\",\"sensors\":{\"activity\":{\"state\":\"ok\",\"last_event_at\":1760089995000},\"extension_brave\":{\"state\":\"unknown\",\"detail\":\"no heartbeat yet\"},\"extension_chrome\":{\"state\":\"ok\",\"detail\":\"version 0.1.0\",\"last_event_at\":1760089800000}},\"queue_depth\":0,\"oldest_unsent_age_ms\":0,\"expected_stop\":false}]}",
+    "request": {
+      "v": 1,
+      "kid": "test-0001",
+      "enc": "wlrH_rdIAXdpoVbLZjjXSTtO-kRUaGPQFdkiY0JUPHM",
+      "ct": "DLKx_EAmz5p8pqtVmaWjIxZktu7yzdpMp0jx45gtGCkd2xc_zW8jzi_tCzviLKRBixx861wIXHol_KHjHRHhIW5OISXUxsxFp7BMuW8XTZuUKvutjUJo8CDNd9zcz6tdElJ590OOx3Wjzl2LOqAPtX5smSK5r8PCVcJ9aEdOARpL9jDe5b_62chb7ahN2N_fRok0lctid31ra__3yepoKH30N6awi6KtDw_z60Mgs395BtWuIvFJ_bSNt7-V54vdSd5oXtMRuLf_JzessSSLoYlMevY4i7iI9PR6_uqsY6Nmeh1boXnse6vAgoEGL1I0PQKAb_FilEQLFjHTnw1LFr-nMwthDldzzJj3kRjnlTgcpAaEhpbnrvuBsPNUioU1B4wWT7_ZFrDzo5clqNXwjxvYbHk-SOcP4D8oD58gVeNLvQ1H0VeMDWBg2OQjtmrMQMzH0u3Iq8yrnW_GDREyovog1LJVXd7C8WpL6REV3L8PhA8Pni32HnhsfkdR3pNS4xJyF0hBdMVmFWq5vuMjxnzzG1VaJ4S43aR7OMwLO7Pqsfb_kkhfaAtaI-iYfYKoQkd02vWlRSQlO2PRhn_R7-QrTmeBrzSh5tbffBLKgqs_ugc7BDJN_PJXlgYNzM938uzWzV1EfEG_qLLdRsUr5PVMBFA_QLjg2V7wDHL7LAeVCyqOeL9T99oLoc1vR9KmwGNu4hEYjPdDrcLkkUW9hkEckaspJjEdm2fYxI2a0TR0DsYS7T_7FBwD23xRR6w-a2Qr6DYS-VjbSWzxEWxoXCol_ndyp67pj0-LFUjB5ho7S6hu9X0W_5vrlgdbZNaSSvzwmKwKu5C9cBbQiwPJS9FuJBznXrgpjxdjaE574Y4zwM9pQwLbgRc3ZdTHwhKeTqzeumg8FFBhBoHoW6uDYRW26eGRk7zdKX_Wf9kE5DJ9Gv2b7y9Qqp4R7Hdtb3Pcc4oGnJtyg28YnUetXQ26UEmr4ycG7Qy0N1bYga2SZNrtG1F2QNiLO2UzWbAnGaRveAcZ1P3xG_6BszKwlkttG1bM2qVYqgKqMi1fohJ4QcbVW-gCxZ7pSDumuyYTDh89_9-zlxGXyPHAuLkcKWHLiua1JBKsC-a9iuRnFzQaM7NE_izQhZBCEgYcf2mCvVeHaBBXlze41VJWuDliw8ykkpi4TQKbLd6eAMQL2HCzblNW8mSEjJ7ROo1sLP7YRVgRE-fqWsc_k5k1Heq0Js4mtwIM0j-0nKkjYcOi4RX9F5H5cyhBJmnS3oSSIafHnhCevZ6D0AABSKYK5kEnTlrWvB14gRRVUs7H-Y5_Eitxnjp4JZGYQZ1funobgXpg7idpsDVMwofl7-u1rng3uEdtTRuqGgmFyedtVAsnKJDINOzCa0jvBooiXnT9oKQVD17QXpsumAk8zRQ7PeaaRARRakZyagB7bwYx0teTB_GSMpIPwjFOwut7p4rXBRTlU_a1DVW0LcANRSWIuADHtQZNue53"
+    },
+    "response_key": "66m9yK1i0dfdME28g9QHGU3GmC3os5BL4uX8hD8g4aU",
+    "response_plaintext": "{\"installation_id\":\"0192f3a0-1c2b-7cde-8f00-112233445566\",\"results\":[{\"id\":\"0192f3a1-0000-7000-8000-0000000000d1\",\"status\":\"accepted\"},{\"id\":\"0192f3a1-0000-7000-8000-0000000000d2\",\"status\":\"duplicate\"},{\"id\":\"0192f3a1-0000-7000-8000-0000000000d3\",\"status\":\"accepted\"}],\"seq\":1}",
+    "response": {
+      "v": 1,
+      "ct": "tMvF-oxw6xM2Oiqp5yvfcrrGj_A1HFrBZo7V6NK54sq_E6X7t-QHwnPdB6I8hf1fNuf1dXnePplAY6Ssv7uhPfjgFEJ3gOj7VQV7JvSHoW3lYYEJmVYD84CQgg72bcrAmLggw5Embzk_dGZn0gY0KGt6kDl8mZyOvvXNr247Ai5m0vuJbCAwMAio9tZ_9hSCOvJXB8oRL68qasulNyVjK4bVLLPrABXT6UtFVh4dK0kwRFx4wvnkH_CuCyHrgkeDxi_p12rjWb2dC7F5lJUvNt4N_QzXJxq4FRu5Ze1ODZbBKMvfYKT9sYK9h3c2azbDJi8YwW-zEosQVOVPNACfZrzB8_GiKPJw2XA4siUXxrl41zV_kpnfGMgPFXXKcM1DuhBwM1A",
+      "nonce": "No93L4h_F-W2fDJB"
+    }
+  },
+  {
+    "producer": "go-desktop",
+    "kid": "test-0001",
+    "purpose": "pair",
+    "info": "beconscient/v1/pair",
+    "plaintext": "{\"code\":\"7KQ2-M9XD\",\"installation_id\":\"0192f3a0-1c2b-7cde-8f00-112233445566\",\"secret\":\"AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8\",\"kind\":\"desktop\",\"name\":\"Test desktop\",\"client_version\":\"0.1.0\"}",
+    "request": {
+      "v": 1,
+      "kid": "test-0001",
+      "enc": "A9sSg-ScrUZWG7RlVZAK59ANSzyNgquiIFxJoq6WVG8",
+      "ct": "ZYEsLzCQAwRZuaNqpVqzDh4sC5rKsLAz9ru-4w2ZJ_oqMAp52qpATJqj9kSIipWZEtViKdNRU0w3vwdjaBf1VkQ2PF6yhzpgKBUVF3gXY-dmNXSOnKQCDJWPbTfcTTAm56gpNEPluthxacjzLd7gsjRmjGmvNxw-YdXPpP8S_dRnPbKDJyqqaq-Ff1ZP4bnEcWJB0cwijpJ5GXQrb5t_p-lakdLfbuVl5vimWObjtpkPajB0nQb5xf-kUp3RhlnkJJ5smmmXCiLhAIofFe9uk6C_CRI"
+    },
+    "response_key": "vsHWMuW8stuGNvFl7Yxt-cm9OmcVQon0iWrVaAcMf24",
+    "response_plaintext": "{\"device_id\":\"0192f3a0-0000-7000-8000-0000000000aa\",\"device_name\":\"Test desktop\",\"fingerprint\":\"AWJC-42F0\"}",
+    "response": {
+      "v": 1,
+      "ct": "9n6ZKERU9P4Ia6n0gUe1aNiQSMiUn97cLUDc9_sFxiBiSFqqOfQDbaT7icuIqOGBMxggMD6SeHDLeL2sUPvOCV-5uAZ1A_P8gR4TgCymPijsVySsHvM2_eOdz9525Y0Kg26Z2k-R1j4LE9_OtXxGFjrCgj0peNEBmv4a",
+      "nonce": "ZRn7_-DJ1cMdAwHb"
+    }
+  }
+]

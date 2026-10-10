@@ -1,0 +1,20 @@
+# systemd --user unit for the beConscient desktop agent.
+# install.sh replaces @BINARY@ with the installed binary path.
+[Unit]
+Description=beConscient desktop agent (screen-time measurement)
+After=graphical-session.target
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=@BINARY@ run
+Restart=on-failure
+RestartSec=10
+UMask=0077
+NoNewPrivileges=yes
+LockPersonality=yes
+RestrictRealtime=yes
+SystemCallArchitectures=native
+
+[Install]
+WantedBy=graphical-session.target
