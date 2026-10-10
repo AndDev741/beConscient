@@ -1,0 +1,25 @@
+name: extension
+on:
+  push:
+    branches: [main]
+    paths: ["extension/**", "contract/**", ".github/workflows/extension.yml"]
+  pull_request:
+    paths: ["extension/**", "contract/**", ".github/workflows/extension.yml"]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: extension/package-lock.json
+      - working-directory: extension
+        run: npm ci
+      - working-directory: extension
+        run: npm test
+      - working-directory: extension
+        run: npm run build
