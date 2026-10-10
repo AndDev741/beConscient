@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Only YouTube events are delivered. flagReportViewIds exposes resource ids,
+    which is all the service reads; it never reads text or descriptions.
+-->
+<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:accessibilityEventTypes="typeWindowStateChanged|typeWindowContentChanged|typeViewScrolled"
+    android:accessibilityFeedbackType="feedbackGeneric"
+    android:accessibilityFlags="flagReportViewIds"
+    android:canRetrieveWindowContent="true"
+    android:description="@string/shorts_service_description"
+    android:notificationTimeout="250"
+    android:packageNames="com.google.android.youtube" />

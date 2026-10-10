@@ -1,0 +1,42 @@
+[
+  {
+    "producer": "kotlin-android",
+    "kid": "test-0001",
+    "purpose": "batch",
+    "info": "beconscient/v1/batch",
+    "plaintext": "{\"header\":{\"installation_id\":\"0192f3a0-1c2b-7cde-8f00-112233445566\",\"credential\":\"AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8\",\"seq\":1,\"sent_at\":1760090000123,\"tz\":\"Europe/Lisbon\",\"tz_offset_min\":60,\"contract_version\":1,\"client_version\":\"0.0.0-test\"},\"events\":[{\"id\":\"0192f3a1-0000-7000-8000-000000000001\",\"type\":\"android.usage\",\"at\":1760089000000,\"kind\":\"ACTIVITY_RESUMED\",\"package\":\"com.example.app\",\"class\":\"com.example.app.MainActivity\",\"instance\":7}]}",
+    "request": {
+      "v": 1,
+      "kid": "test-0001",
+      "enc": "YaM7eiukOECdLPGuirFHJncO_fIb0s-YGgvLKwPSHkk",
+      "ct": "PzgarCPGUGZmJSGVDCO3jhdeEHcKi1Cjw3ui_BOACr50VqvFbpig3BjPzRJUN7nadKI4PiibPFLnEgPJ-dDNlLI569jkQNqNjyRtsstM3qQGrnGzJc7JAdeG8nlc8OcUbfz-4CSp_jtZn_qQBD7rUhGoiDQr6gvEXFLPoMkilvg12SJimwIca7Epw9RAdupiLBfuDLD8Ghi7Wf87MjDp--7XzPP7Tm6jmrHL48_9PKatGsY9xQyaHdTBcQoQKenyBiBm7OapVfWyoFRbPguQpfHesAkAzdxXByJU5-NQiJMZi4wFzqB65Z8irGhwCUSqkOQ_hEIWndqryx6iPdLgmhBUDPJx_8N8_3AbyuJvp7G2f4aCl7eRUHsprxIoGN5qFeFQ2faG3rH7A6LbpOcdRBJGeHxbgILkQyvwhkBFBEShnHQzRySKIpVdgD5UdIHWjPCjyIUA7DDDGPd07GD1ASf9JrXP5pYd7GXJEyAIcxyia4fbC_muCUw062Fruv64H3_bZXU9koCa8y9-OwYpGsTXNxwqEwuIXUcSSI7rljNs1RsDpnJyA2VJ8z77CCxCz-lhLpZP9W4XwYoeSVq7syODGTHYWt8d9RSTbbuhlgGDaifwWhMxpA"
+    },
+    "response_key": "Btv29zboXhcK9Ysm18mwcwGPn4gGzUxa3u_F6x2gyY8",
+    "response_plaintext": "{\"installation_id\":\"0192f3a0-1c2b-7cde-8f00-112233445566\",\"seq\":1,\"results\":[{\"id\":\"0192f3a1-0000-7000-8000-000000000001\",\"status\":\"accepted\"}]}",
+    "response": {
+      "v": 1,
+      "ct": "rS3BodYKDx3ECwMO-OiB-gr7N8KQWSI1fk61WHSZlDntAJfJhc6Z0Q9WafIhH6rf7vQHOQQhHdtLws2qLUH5tlfcUAasn6oeR9NDBgMYFTHjhHfTMIZDxYQGfcSunTj1W1RGiIDm6saAVKk0XH2psIfmFlHtw52n6cVmihe1PYPpKRR3VXtpbfpYF86-y_RTdTQ_K0BOxvCQc8XplRKXFg",
+      "nonce": "EtvnGmozQgk2YlIj"
+    }
+  },
+  {
+    "producer": "kotlin-android",
+    "kid": "test-0001",
+    "purpose": "pair",
+    "info": "beconscient/v1/pair",
+    "plaintext": "{\"code\":\"7KQ2-M9XD\",\"installation_id\":\"0192f3a0-1c2b-7cde-8f00-112233445566\",\"secret\":\"AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8\",\"kind\":\"android\",\"name\":\"Test phone\",\"client_version\":\"0.0.0-test\"}",
+    "request": {
+      "v": 1,
+      "kid": "test-0001",
+      "enc": "oJAPotsjHlnHPltGJVBJUV08pVjiMl_zvloblPQhE1w",
+      "ct": "QzuZD38DspKG0Uz6mKDSEOs1S6K0w0x9E8QTjgbZst4gi7dIIt0SP2w5jX5ewTswDDU1kAqilDuImzJXkBte3-FyegM6Hnfn7d5y7jSZbxPfIgJvpTwiL0Dh2F9gWPadit5ph_Cg4rEmwtYzlpUgfhdP0sjM00-JsALWRtBUNNStQptbJyxanTe4ryYrrulanJbSGRXiId20kh_ymmwjlrY1S4m3C7A5AxAnQYlhG_XvMGtVTUSkrHRjuNrf5bPZclt4hjdUvbrLqTkkPE3lp6QLbKG94YM"
+    },
+    "response_key": "vwAmvvqLxXiFmlhTXqrVe7bD25ERH_LNO4GWQXMNugs",
+    "response_plaintext": "{\"device_id\":\"0192f3a0-0000-7000-8000-0000000000aa\",\"device_name\":\"Test phone\",\"fingerprint\":\"AWJC-42F0\"}",
+    "response": {
+      "v": 1,
+      "ct": "1mP_DbCpjmaFwXliPUaS2q-Pm_t0qMCM-66IhExXEiLC5tcSOpgIOQAyNgZydPcjnBrihdnq6JvLFuEVmjhx0BAn739mV1RWJF_H7QcgMtiUwg4Zi8PuTuHYY_InYG35GfLGcXZhhtPkKc409iDNlO1-LcoLr2dmfQ",
+      "nonce": "OtKjaoJdLa6RlVZy"
+    }
+  }
+]

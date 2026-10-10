@@ -31,7 +31,7 @@ Besides the `id`, some types carry a natural key so that re-reading the same fac
 | Type | Natural key |
 |---|---|
 | `android.usage` | device, `kind`, `at`, `package`, `class` |
-| `android.notification_posted` | device, `ref` |
+| `android.notification_posted` | device, `ref`, `at` (an update reuses the `ref` with a later `at`) |
 | `android.notification_removed` | device, `ref` |
 
 ## Types
