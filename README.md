@@ -26,7 +26,7 @@ Everything travels inside an HPKE envelope to your server, so a TLS-terminating 
 | [`android/`](android) | Android collector (Kotlin) |
 | [`desktop/`](desktop) | Desktop agent and native messaging host (Go) |
 | [`extension/`](extension) | Browser extension (Manifest V3) |
-| [`deploy/`](deploy) | Kubernetes manifests and backup jobs |
+| [`deploy/`](deploy) | How production runs (the manifests live in [be-infra](https://github.com/AndDev741/be-infra)) |
 | [`tools/`](tools) | Key generation and envelope test vectors |
 | [`docs/`](docs) | Design notes |
 

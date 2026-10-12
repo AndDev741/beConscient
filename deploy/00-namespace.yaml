@@ -1,7 +1,0 @@
-# Namespace for the beConscient backend and page. The database lives in a
-# Postgres instance shared with another application (see db/setup.sql); this
-# namespace only holds the app, its secrets and the backup jobs.
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: beconscient

@@ -35,7 +35,7 @@ flowchart TB
 | `android/` | Kotlin collector. |
 | `desktop/` | Go agent and native messaging host. |
 | `extension/` | Manifest V3 extension for Chrome and Brave. |
-| `deploy/` | Kubernetes manifests, database setup, backup jobs. |
+| `deploy/` | Production notes; the manifests live in be-infra. |
 | `contract/` | Event, envelope and API contracts shared by all of the above. |
 
 ## Privacy rules
