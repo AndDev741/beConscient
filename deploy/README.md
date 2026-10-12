@@ -3,7 +3,7 @@
 The reference deployment is a single-node k3s cluster with:
 
 - a Postgres 17 instance that already runs in the cluster and is shared with another application (beConscient gets its own database and roles);
-- a registry that listens only on the node's loopback (`127.0.0.1:5000`);
+- images on GHCR (`ghcr.io/anddev741/beconscient-{backend,frontend}`), built by the `backend` and `frontend` workflows on every push to `main`;
 - a TLS-terminating proxy (for example a Cloudflare Tunnel) in front of the frontend NodePort.
 
 Nothing here needs root on the node.
@@ -65,18 +65,11 @@ Take a manual backup before any deployment that carries a Flyway migration: Flyw
 
 ## 4. Images and rollout
 
-```sh
-deploy/scripts/publish-images.sh <ssh host>      # builds and pushes both images
-kubectl apply -f deploy/network-policy.yaml       # only the page's nginx may reach the backend
-kubectl apply -f deploy/backend.yaml -f deploy/frontend.yaml
-kubectl -n beconscient set image deploy/beconscient-backend backend=localhost:5000/beconscient-backend@<digest>
-kubectl -n beconscient set image deploy/beconscient-frontend nginx=localhost:5000/beconscient-frontend@<digest>
-kubectl -n beconscient rollout status deploy/beconscient-backend
-```
+The `backend` and `frontend` workflows push `:latest` and `:<short sha>` to GHCR on every push to `main` (or a manual run). The production manifests live in [be-infra](https://github.com/AndDev741/be-infra) (`apps/beconscient`), where Flux image automation commits each new `:latest` digest and rolls it out.
 
 The backend uses the `Recreate` strategy, so a deployment has a short downtime. Collectors queue events meanwhile.
 
-`publish-images.sh` builds a native backend image with `-march=x86-64-v2` for nodes without AVX2. Pass `--jvm` to build the JVM image instead (raise the memory limit in `backend.yaml` to about 384Mi).
+The backend image is native, built with `-march=x86-64-v2` for nodes without AVX2. `deploy/scripts/publish-images.sh` still builds and pushes both images by hand to a registry on the node's loopback, for a cluster without GHCR access; pass `--jvm` to build the JVM image instead (raise the memory limit in `backend.yaml` to about 384Mi).
 
 ## 5. Exposure
 

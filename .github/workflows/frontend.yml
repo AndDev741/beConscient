@@ -5,6 +5,7 @@ on:
     paths: ["frontend/**", "contract/**", ".github/workflows/frontend.yml"]
   pull_request:
     paths: ["frontend/**", "contract/**", ".github/workflows/frontend.yml"]
+  workflow_dispatch:
 permissions:
   contents: read
 jobs:
@@ -23,3 +24,30 @@ jobs:
         run: npm test
       - working-directory: frontend
         run: npm run build
+
+  # Image on GHCR, like befree's. be-infra's Flux image automation picks up
+  # each new :latest digest and deploys it.
+  image:
+    needs: test
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    env:
+      IMAGE: ghcr.io/anddev741/beconscient-frontend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push
+        working-directory: frontend
+        run: |
+          docker build \
+            --label org.opencontainers.image.source=https://github.com/${{ github.repository }} \
+            -t "$IMAGE:${GITHUB_SHA::7}" -t "$IMAGE:latest" .
+          docker push "$IMAGE:${GITHUB_SHA::7}"
+          docker push "$IMAGE:latest"
