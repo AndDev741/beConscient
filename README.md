@@ -11,7 +11,7 @@ It measures and shows. It never blocks, nudges or judges: the point is an honest
 | Source | What | What it never sends |
 |---|---|---|
 | Android | Foreground app periods, unlocks, notification arrivals and whether you tapped or dismissed them, YouTube Shorts vs regular YouTube | Notification content, senders, messages |
-| Linux desktop (GNOME, Wayland) | Active screen time, split into work and personal by your work hours | Window titles, app names, URLs |
+| Linux desktop (GNOME, Wayland) | Active screen time, split into work and personal by your work hours, or into any category for a stretch you mark on the page | Window titles, app names, URLs |
 | Browser extension (Chrome, Brave) | Time on YouTube (with video title) and LinkedIn (page kind only) | Any other site, URLs, LinkedIn titles |
 
 Everything travels inside an HPKE envelope to your server, so a TLS-terminating proxy in front of it sees only ciphertext.

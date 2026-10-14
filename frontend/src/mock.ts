@@ -3,7 +3,7 @@
  * so the page can be previewed with `npm run dev:mock` and no backend.
  * Loaded only when the build runs in mock mode; production builds leave it out.
  */
-import type { Category, Corrections, DayView, Device, Settings, Subject } from './api';
+import type { Category, ComputerLabel, Corrections, DayView, Device, Settings, Subject } from './api';
 import {
   CATEGORIES, CORRECTIONS, DEVICES, SUBJECTS, makeBackstage, makeDay, makeSettings, makeTrace, makeTrends,
   makeValidation,
@@ -34,6 +34,8 @@ export function createMockState() {
   const devices: Device[] = clone(DEVICES);
   let settings: Settings = makeSettings(today);
   const corrections: Corrections = clone(CORRECTIONS);
+  // Listed on the day they were marked; mock mode does not move minutes between categories
+  let labels: (ComputerLabel & { date: string })[] = [];
   const entered: Record<string, number> = {
     [shiftDays(today, -2)]: 240,
     [shiftDays(today, -3)]: 205,
@@ -95,7 +97,26 @@ export function createMockState() {
     if (!signedIn) return fail(401, 'unauthorized', 'Sign in first.');
     if (method === 'GET' && path === '/api/session') return ok({ username: 'owner' });
 
-    if (method === 'GET' && path === '/api/day') return ok(withCategories(dayFor(query.get('date') ?? today)));
+    if (method === 'GET' && path === '/api/day') {
+      const date = query.get('date') ?? today;
+      return ok({ ...withCategories(dayFor(date)), computerLabels: labels.filter((l) => l.date === date) });
+    }
+    if (method === 'POST' && path === '/api/computer-labels') {
+      const date = String(body.date);
+      const from = new Date(`${date}T${String(body.start)}`).getTime();
+      let to = new Date(`${date}T${String(body.end)}`).getTime();
+      if (to <= from) to += 86_400_000;
+      if (labels.some((l) => l.from < to && l.to > from)) return fail(409, 'label_overlap', 'That stretch overlaps one already marked. Remove that one first.');
+      const row = { id: `l-${Date.now()}`, categoryId: String(body.categoryId), from, to };
+      labels = [...labels, { ...row, date, minutes: Math.round((to - from) / 60_000) }];
+      return { status: 201, body: row };
+    }
+    let m = path.match(/^\/api\/computer-labels\/([^/]+)$/);
+    if (m && method === 'DELETE') {
+      const id = decodeURIComponent(m[1]);
+      labels = labels.filter((l) => l.id !== id);
+      return ok();
+    }
     if (method === 'GET' && path === '/api/trends') {
       const period = (query.get('period') ?? 'week') as 'day' | 'week' | 'month';
       return ok(makeTrends(period, query.get('anchor') ?? today, (d) => withCategories(dayFor(d)), today, coverageStart));
@@ -107,7 +128,7 @@ export function createMockState() {
       categories = [...categories, c];
       return { status: 201, body: c };
     }
-    let m = path.match(/^\/api\/categories\/([^/]+)$/);
+    m = path.match(/^\/api\/categories\/([^/]+)$/);
     if (m) {
       const id = decodeURIComponent(m[1]);
       const c = categories.find((x) => x.id === id);
@@ -117,7 +138,9 @@ export function createMockState() {
         return ok(c);
       }
       if (method === 'DELETE') {
-        if (subjects.some((s) => s.categoryId === id)) return fail(409, 'category_in_use', 'Category in use.');
+        if (subjects.some((s) => s.categoryId === id) || labels.some((l) => l.categoryId === id)) {
+          return fail(409, 'category_in_use', 'Category in use.');
+        }
         categories = categories.filter((x) => x.id !== id);
         return ok();
       }

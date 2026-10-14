@@ -1,6 +1,7 @@
 package org.beconscient.view;
 
 import org.beconscient.category.Catalog;
+import org.beconscient.label.ComputerLabel;
 import org.beconscient.settings.Settings;
 
 import java.time.Instant;
@@ -10,7 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-/** Everything one read needs, loaded once: timeline, settings, categories, devices and coverage. */
+/** Everything one read needs, loaded once: timeline, settings, categories, labels, devices and coverage. */
 public final class ReadContext {
 
     public record Inst(UUID id, Instant createdAt, Instant revokedAt) {
@@ -42,6 +43,8 @@ public final class ReadContext {
     public final UserTimeline timeline;
     public final Settings settings;
     public final Catalog catalog;
+    /** Computer time marked by hand, by start; never overlapping. */
+    public final List<ComputerLabel> labels;
     /** Phones first, then computers; overlapping time belongs to the first. */
     public final List<DeviceInfo> devices;
     /** Earliest fact of each device's time sensor (usage or activity). */
@@ -49,12 +52,13 @@ public final class ReadContext {
     public final LocalDate today;
     final Map<String, Object> cache = new HashMap<>();
 
-    public ReadContext(Instant now, UserTimeline timeline, Settings settings, Catalog catalog, List<DeviceInfo> devices,
-                       Map<UUID, Long> coverageStart) {
+    public ReadContext(Instant now, UserTimeline timeline, Settings settings, Catalog catalog, List<ComputerLabel> labels,
+                       List<DeviceInfo> devices, Map<UUID, Long> coverageStart) {
         this.now = now;
         this.timeline = timeline;
         this.settings = settings;
         this.catalog = catalog;
+        this.labels = labels;
         this.devices = devices;
         this.coverageStart = coverageStart;
         this.today = timeline.today(now);

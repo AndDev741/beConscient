@@ -38,7 +38,8 @@ public class TestData {
             jdbc.update("""
                     truncate raw_events, quarantine, interval_conflicts, device_counters, dirty_blocks, sensor_coverage,
                       zone_points, batch_log, installations, pairing_codes, blocks, segments, raw_intervals, unlocks,
-                      rebuild_blocks, subject_mappings, non_workdays, validation_inputs, redactions, exclusions, devices
+                      rebuild_blocks, subject_mappings, non_workdays, validation_inputs, redactions, exclusions,
+                      computer_labels, devices
                     restart identity cascade""");
             jdbc.update("update pairing_state set consecutive_failures = 0, locked_out = false, locked_out_at = null");
             jdbc.update("""

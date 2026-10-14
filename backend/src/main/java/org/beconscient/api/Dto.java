@@ -60,9 +60,14 @@ public final class Dto {
     public record NotificationCount(String subjectKey, String label, long posted, long tapped, long dismissed) {
     }
 
+    /** A stretch marked by hand that touches the day; {@code minutes} is the computer time it took on that day. */
+    public record DayLabel(String id, String categoryId, long from, long to, long minutes) {
+    }
+
     public record DayView(String date, String zone, String state, Derivation derivation, Headline headline,
                           Totals totals, List<CategoryMinutes> byCategory, List<Hour> hours,
-                          List<SubjectMinutes> topSubjects, Unlocks unlocks, List<NotificationCount> notifications) {
+                          List<SubjectMinutes> topSubjects, Unlocks unlocks, List<NotificationCount> notifications,
+                          List<DayLabel> computerLabels) {
     }
 
     // ------------------------------------------------------------- trends
@@ -197,5 +202,13 @@ public final class Dto {
     }
 
     public record Corrections(List<RedactionView> redactions, List<ExclusionView> exclusions) {
+    }
+
+    // ------------------------------------------------------------- computer labels
+
+    public record ComputerLabelRequest(String date, String start, String end, String categoryId) {
+    }
+
+    public record ComputerLabelView(String id, String categoryId, long from, long to) {
     }
 }

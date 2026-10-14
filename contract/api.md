@@ -47,7 +47,8 @@ Login and pairing share a global rate limiter with exponential backoff capped at
   ],
   "topSubjects": [ { "subjectKey": "app:com.whatsapp", "label": "com.whatsapp", "categoryId": "…", "minutes": 41 } ],
   "unlocks": { "count": 57, "firstApps": [ { "subjectKey": "app:com.whatsapp", "label": "com.whatsapp", "count": 19 } ] },
-  "notifications": [ { "subjectKey": "app:com.whatsapp", "label": "com.whatsapp", "posted": 88, "tapped": 21, "dismissed": 30 } ]
+  "notifications": [ { "subjectKey": "app:com.whatsapp", "label": "com.whatsapp", "posted": 88, "tapped": 21, "dismissed": 30 } ],
+  "computerLabels": [ { "id": "…", "categoryId": "…", "from": 1760122800000, "to": 1760129100000, "minutes": 98 } ]
 }
 ```
 
@@ -58,6 +59,7 @@ Login and pairing share a global rate limiter with exponential backoff capped at
 - `hours` has one entry per local hour; a day with a daylight-saving change has 23 or 25 entries.
 - `totals.screenMinutes` is the union across devices. In `byCategory` and `hours`, overlapping time is attributed to the phone.
 - Built-in categories: `Work`, `Personal computer`, `Uncategorized` (an app or site without a mapping) and `Unattributed` (phone screen on and unlocked with no attributable app).
+- `computerLabels` lists the stretches marked by hand that touch the day (see Computer labels). `minutes` is the computer time each one took on this day.
 
 ## Trends
 
@@ -87,7 +89,21 @@ Login and pairing share a global rate limiter with exponential backoff capped at
 | GET | `/api/subjects?q=&unmapped=&limit=` | | `[ { "key", "kind", "label", "categoryId", "minutes30d" } ]`, sorted by `minutes30d` descending |
 | PUT | `/api/subjects/{key}/category` | `{ "categoryId": "…" \| null }` | subject |
 
-Subject keys: `app:<package>`, `app:<package>#shorts`, `site:youtube`, `site:linkedin`. Desktop activity is always `Work` or `Personal computer` and is not a subject. Reclassifying a subject applies to all past days.
+Subject keys: `app:<package>`, `app:<package>#shorts`, `site:youtube`, `site:linkedin`. Desktop activity is not a subject. It is `Work` or `Personal computer` by the work window, unless it falls in a stretch marked by hand. Reclassifying a subject applies to all past days.
+
+## Computer labels
+
+The desktop agent reports when the computer was in use and never what was on screen. A label marks a stretch of local time with a category, and the computer time inside it takes that category in place of `Work` or `Personal computer`. Site time (YouTube, LinkedIn) and phone time keep their own categories. Labels are applied when reading, so marking a past stretch changes that day.
+
+| Method | Path | Body | Response |
+|---|---|---|---|
+| POST | `/api/computer-labels` | `{ "date": "2026-10-12", "start": "20:00", "end": "21:45", "categoryId": "…" }` | 201 `{ "id", "categoryId", "from", "to" }` |
+| DELETE | `/api/computer-labels/{id}` | | 204 |
+
+- `start` and `end` are local times on `date` in the user timeline. An `end` before the `start` belongs to the next day.
+- Labels never overlap. One that would is refused with 409 `label_overlap`; stretches that only touch are fine.
+- `Uncategorized` and `Unattributed` are refused with 400.
+- A category a label still uses cannot be deleted: 409 `category_in_use`.
 
 ## Devices
 

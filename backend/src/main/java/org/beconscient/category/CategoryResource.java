@@ -100,6 +100,9 @@ public class CategoryResource {
         if (SubjectMapping.count("categoryId", c.id) > 0) {
             throw ApiException.conflict("category_in_use", "Apps or sites still map to this category.");
         }
+        if (jdbc.count("select count(*) from computer_labels where category_id = ?", c.id) > 0) {
+            throw ApiException.conflict("category_in_use", "Computer time marked on the day page still uses this category.");
+        }
         c.delete();
     }
 
