@@ -211,7 +211,8 @@ public class BackstageService {
             Map.entry("site_carved_out_of_computer", "Site time taken out of Work or Personal computer"),
             Map.entry("desktop_activity", "Active time reported by the desktop agent"),
             Map.entry("work_or_personal_by_window_at_read",
-                    "Work inside the work window valid that day, Personal computer outside it or on a non-working day"));
+                    "Work inside the work window valid that day, Personal computer outside it or on a non-working day, "
+                            + "unless the time was marked by hand on the day page"));
 
     @Transactional
     public Dto.Trace trace(long segmentId) {

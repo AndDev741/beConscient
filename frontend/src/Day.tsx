@@ -1,9 +1,12 @@
+import { useState, type FormEvent } from 'react';
 import { api, type DayView } from './api';
 import { BarList, HourlyChart } from './charts';
-import { count, dateLong, duration, durationParts, safeColor, shiftDays, todayIso } from './format';
+import {
+  count, dateLong, duration, durationParts, isTime, safeColor, shiftDays, timeOfDay, timeToMinutes, todayIso,
+} from './format';
 import { useInterval, useLoad, useRevision } from './hooks';
-import { ChevronLeft, ChevronRight, Desktop, Phone } from './icons';
-import { Badge, Card, Empty, Loadable, Notice, Progress, Skeleton } from './ui';
+import { ChevronLeft, ChevronRight, Desktop, Phone, Trash } from './icons';
+import { Badge, Card, Empty, Loadable, Notice, Progress, Skeleton, Swatch, errorText } from './ui';
 
 export function Day({ date, onDate, revision, onTrace }: {
   date: string;
@@ -55,7 +58,7 @@ export function Day({ date, onDate, revision, onTrace }: {
       </div>
 
       <Loadable state={day} skeleton={<DaySkeleton />}>
-        {(data) => <DayBody d={data} onTrace={onTrace} />}
+        {(data) => <DayBody d={data} onTrace={onTrace} onChanged={day.reload} />}
       </Loadable>
     </>
   );
@@ -70,10 +73,13 @@ function DaySkeleton() {
   );
 }
 
-function DayBody({ d, onTrace }: { d: DayView; onTrace?: (segmentId: string) => void }) {
+function DayBody({ d, onTrace, onChanged }: { d: DayView; onTrace?: (segmentId: string) => void; onChanged: () => void }) {
   const empty = d.totals.screenMinutes === 0 && d.hours.every((h) => h.byCategory.every((c) => c.minutes === 0));
   const categoryName = new Map(d.byCategory.map((c) => [c.categoryId, c.name]));
   const work = d.byCategory.find((c) => c.name === 'Work');
+  const computer = (d.totals.byDevice.some((x) => x.kind === 'desktop') || (d.computerLabels?.length ?? 0) > 0) && (
+    <ComputerTime d={d} onChanged={onChanged} />
+  );
 
   return (
     <>
@@ -92,13 +98,16 @@ function DayBody({ d, onTrace }: { d: DayView; onTrace?: (segmentId: string) => 
       <Headline d={d} />
 
       {empty ? (
-        <Card>
-          <Empty title="No screen time recorded on this day.">
-            {d.state === 'closed'
-              ? 'Every device reported and none had its screen in use.'
-              : 'Nothing has arrived for this day yet.'}
-          </Empty>
-        </Card>
+        <>
+          <Card>
+            <Empty title="No screen time recorded on this day.">
+              {d.state === 'closed'
+                ? 'Every device reported and none had its screen in use.'
+                : 'Nothing has arrived for this day yet.'}
+            </Empty>
+          </Card>
+          {computer}
+        </>
       ) : (
         <>
           <Card title="By hour" hint={`${duration(d.totals.screenMinutes)} in total`}>
@@ -142,6 +151,8 @@ function DayBody({ d, onTrace }: { d: DayView; onTrace?: (segmentId: string) => 
               </ul>
             </Card>
           </div>
+
+          {computer}
 
           <Card title="Top apps and sites">
             {d.topSubjects.length === 0 ? (
@@ -210,6 +221,127 @@ function DayBody({ d, onTrace }: { d: DayView; onTrace?: (segmentId: string) => 
         </Card>
       </div>
     </>
+  );
+}
+
+/** Categories that say nothing about what was done, so a mark cannot use them. */
+const NOT_MARKABLE = new Set(['Uncategorized', 'Unattributed']);
+
+/**
+ * The computer reports only when it was in use. Here the owner marks a stretch
+ * ("20:00 to 21:45, Study") and the computer time inside it takes that category.
+ */
+function ComputerTime({ d, onChanged }: { d: DayView; onChanged: () => void }) {
+  const categories = useLoad(() => api.categories(), 'categories');
+  const labels = d.computerLabels ?? [];
+  const [start, setStart] = useState('');
+  const [end, setEnd] = useState('');
+  const [picked, setPicked] = useState('');
+  const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const all = categories.data ?? [];
+  const markable = all.filter((c) => !(c.builtin && NOT_MARKABLE.has(c.name)));
+  const own = markable.filter((c) => !c.builtin);
+  const categoryId = markable.some((c) => c.id === picked) ? picked : (own[0]?.id ?? markable[0]?.id ?? '');
+  const known = new Map([
+    ...d.byCategory.map((c) => [c.categoryId, { name: c.name, color: c.color }] as const),
+    ...all.map((c) => [c.id, { name: c.name, color: c.color }] as const),
+  ]);
+  const nextDay = isTime(start) && isTime(end) && timeToMinutes(end) < timeToMinutes(start);
+
+  async function mark(e: FormEvent) {
+    e.preventDefault();
+    if (!isTime(start) || !isTime(end)) return setError('Pick when the stretch starts and ends.');
+    if (start === end) return setError('The stretch must end after it starts.');
+    if (!categoryId) return setError('Pick a category.');
+    setBusy('mark');
+    setError(null);
+    try {
+      await api.addComputerLabel({ date: d.date, start, end, categoryId });
+      setStart('');
+      setEnd('');
+      onChanged();
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function remove(id: string) {
+    setBusy(id);
+    setError(null);
+    try {
+      await api.removeComputerLabel(id);
+      onChanged();
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  return (
+    <Card title="Computer time" hint="Marked by hand">
+      <p className="help">
+        The computer reports when it was in use, never what was on screen. Mark a stretch to give its computer time a
+        category, such as study. YouTube, LinkedIn and the phone keep their own.
+      </p>
+      {labels.length > 0 && (
+        <ul className="rows">
+          {labels.map((l) => {
+            const c = known.get(l.categoryId);
+            const when = `${timeOfDay(l.from, d.zone)} – ${timeOfDay(l.to, d.zone)}`;
+            return (
+              <li key={l.id}>
+                <Swatch color={safeColor(c?.color)} />
+                <span className="grow">
+                  <span className="label">{c?.name ?? 'Deleted category'}</span>
+                  <span className="muted small"> · {when}</span>
+                </span>
+                <span className="num">{duration(l.minutes)}</span>
+                <button
+                  className="btn ghost small"
+                  onClick={() => void remove(l.id)}
+                  disabled={busy !== null}
+                  aria-label={`Remove ${c?.name ?? 'mark'} ${when}`}
+                >
+                  <Trash size={15} /> {busy === l.id ? 'Removing…' : 'Remove'}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      <form className="formgrid subform" onSubmit={mark}>
+        <div className="formrow">
+          <div className="field">
+            <label htmlFor="cl-start">From</label>
+            <input id="cl-start" className="input" type="time" value={start} onChange={(e) => setStart(e.target.value)} />
+          </div>
+          <div className="field">
+            <label htmlFor="cl-end">To</label>
+            <input id="cl-end" className="input" type="time" value={end} onChange={(e) => setEnd(e.target.value)} />
+          </div>
+          <div className="field">
+            <label htmlFor="cl-cat">Category</label>
+            <select id="cl-cat" className="input" value={categoryId} onChange={(e) => setPicked(e.target.value)}>
+              {markable.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          </div>
+          <button className="btn primary" type="submit" disabled={busy !== null || !categoryId}>
+            {busy === 'mark' ? 'Marking…' : 'Mark'}
+          </button>
+        </div>
+        {nextDay && <p className="help">Ends the next day at {end}.</p>}
+        {categories.data && own.length === 0 && (
+          <p className="help">Add a category such as Study under Categories to mark time with it.</p>
+        )}
+        {categories.error && <p className="err" role="alert">{categories.error}</p>}
+        {error && <p className="err" role="alert">{error}</p>}
+      </form>
+    </Card>
   );
 }
 

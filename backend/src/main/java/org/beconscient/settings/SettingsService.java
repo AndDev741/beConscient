@@ -140,14 +140,14 @@ public class SettingsService {
         return view();
     }
 
-    static String time(String s) {
+    public static String time(String s) {
         if (s == null || !HH_MM.matcher(s).matches()) {
             throw ApiException.badRequest("Times are HH:MM.");
         }
         return LocalTime.parse(s).toString();
     }
 
-    static LocalDate date(String s) {
+    public static LocalDate date(String s) {
         try {
             return LocalDate.parse(s);
         } catch (DateTimeParseException | NullPointerException e) {

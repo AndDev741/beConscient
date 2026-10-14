@@ -16,6 +16,8 @@ import org.beconscient.common.Jdbc;
 import org.beconscient.derive.DerivationService;
 import org.beconscient.derive.SegmentDraft;
 import org.beconscient.health.HealthService;
+import org.beconscient.label.ComputerLabel;
+import org.beconscient.label.ComputerLabelService;
 import org.beconscient.settings.Settings;
 import org.beconscient.settings.SettingsService;
 
@@ -62,6 +64,9 @@ public class DayService {
 
     @Inject
     DerivationService derivation;
+
+    @Inject
+    ComputerLabelService labels;
 
     /** A stored segment as read. */
     public record Seg(long id, UUID deviceId, long start, long end, String kind, String subject) {
@@ -114,7 +119,7 @@ public class DayService {
                         where c.first_event_at is not null
                           and ((d.kind = 'android' and c.sensor = 'usage') or (d.kind = 'desktop' and c.sensor = 'activity'))""",
                 rs -> coverage.put(Jdbc.uuid(rs, "device_id"), rs.getLong("first_event_at")));
-        return new ReadContext(clock.now(), timeline, s, catalog, devices, coverage);
+        return new ReadContext(clock.now(), timeline, s, catalog, labels.all(), devices, coverage);
     }
 
     public Bounds bounds(ReadContext ctx, LocalDate date) {
@@ -159,7 +164,11 @@ public class DayService {
         return Intervals.union(out);
     }
 
-    /** Categorised pieces of one device's segments, before priority. */
+    /**
+     * Categorised pieces of one device's segments, before priority. Computer time
+     * inside a stretch marked by hand takes the stretch's category; the rest is
+     * Work inside the work window and Personal computer outside it.
+     */
     List<Piece> classify(ReadContext ctx, List<Seg> segs, List<Span> work) {
         List<Piece> out = new ArrayList<>();
         for (Seg s : segs) {
@@ -167,6 +176,16 @@ public class DayService {
                 case SegmentDraft.COMPUTER -> {
                     List<Span> one = List.of(s.span());
                     List<Piece> parts = new ArrayList<>();
+                    for (ComputerLabel l : ctx.labels) {
+                        if (l.from() >= s.end()) {
+                            break;
+                        }
+                        List<Span> marked = Intervals.intersect(one, List.of(l.span()));
+                        for (Span m : marked) {
+                            parts.add(new Piece(m.start(), m.end(), l.categoryId(), null, s.id(), s.deviceId()));
+                        }
+                        one = Intervals.subtract(one, marked);
+                    }
                     for (Span w : Intervals.intersect(one, work)) {
                         parts.add(new Piece(w.start(), w.end(), Category.WORK, null, s.id(), s.deviceId()));
                     }
@@ -374,7 +393,29 @@ public class DayService {
         return new Dto.DayView(date.toString(), ctx.timeline.zoneOf(date).getId(), state(ctx, date, b),
                 derivationDto(), headline.dto(),
                 new Dto.Totals(Minutes.of(unionDay), overlapMinutes, byDevice),
-                byCategory, hours, topSubjects(ctx, pieces, b), unlocks(b), notifications(b));
+                byCategory, hours, topSubjects(ctx, pieces, b), unlocks(b), notifications(b),
+                computerLabels(ctx, pieces, b));
+    }
+
+    /** The marked stretches touching the day, with the computer time each took on it. */
+    private static List<Dto.DayLabel> computerLabels(ReadContext ctx, List<Piece> pieces, Bounds b) {
+        List<Dto.DayLabel> out = new ArrayList<>();
+        for (ComputerLabel l : ctx.labels) {
+            if (l.to() <= b.start() || l.from() >= b.end()) {
+                continue;
+            }
+            long from = Math.max(l.from(), b.start());
+            long to = Math.min(l.to(), b.end());
+            long ms = 0;
+            for (Piece p : pieces) {
+                // Inside a stretch, computer pieces are the ones without a subject in its category
+                if (p.subject() == null && p.categoryId().equals(l.categoryId())) {
+                    ms += Math.max(0, Math.min(p.end(), to) - Math.max(p.start(), from));
+                }
+            }
+            out.add(new Dto.DayLabel(l.id().toString(), l.categoryId().toString(), l.from(), l.to(), Minutes.of(ms)));
+        }
+        return out;
     }
 
     public Dto.Derivation derivationDto() {

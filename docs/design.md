@@ -95,6 +95,7 @@ stateDiagram-v2
 - Counted time is Active plus Passive. Entering Idle trims the open interval back to the last input, as a new revision.
 - "Video or call running" means a GNOME session idle inhibitor is active, or the extension reports a playing video.
 - **Classification**: active time inside the work window is `Work`; outside it, or on a non-working day, it is `Personal computer`.
+- **Marked stretches**: the owner can mark a stretch on the page with a category ("20:00 to 21:45, Study"). Computer time inside it takes that category, whatever the work window says. The agent never learns what was on screen, so this is the only way computer time gets a category of its own. Like the windows, marks are applied when reading. Site time inside a mark keeps its subject.
 - **Sites**: `browser.site` intervals are clipped to the agent's counted intervals, so the lock cut, idle and the 2-hour cap apply to them too. Clipped site time leaves `Work` or `Personal computer` and goes to the site's subject.
 - A site counts while its tab is active in the focused browser window and the computer is active. A video playing in the active tab of an unfocused window counts only while the agent is Passive, so music playing behind an editor while typing stays as work.
 

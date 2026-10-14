@@ -1,15 +1,15 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { DayView } from './api';
 import { Day } from './Day';
-import { makeDay } from './fixtures';
+import { CATEGORIES, makeDay } from './fixtures';
 import { duration } from './format';
 import { XSS_IMG, XSS_SVG, error, freezeNow, mockApi, pending, reply, type Handler } from './test/api';
 
 const DATE = '2026-10-08';
 
 function renderDay(day: DayView | Handler, date = DATE, onTrace?: (id: string) => void) {
-  const api = mockApi({ 'GET /api/day': typeof day === 'function' ? day : reply(day) });
+  const api = mockApi({ 'GET /api/day': typeof day === 'function' ? day : reply(day), 'GET /api/categories': reply(CATEGORIES) });
   const view = render(<Day date={date} onDate={() => {}} revision={0} onTrace={onTrace} />);
   return { ...api, ...view };
 }
@@ -164,5 +164,98 @@ describe('Day', () => {
     render(<Day date="2026-10-10" onDate={() => {}} revision={0} />);
     await screen.findByTestId('headline');
     expect(screen.getByRole('button', { name: 'Next day' })).toBeDisabled();
+  });
+});
+
+describe('Computer time marked by hand', () => {
+  // 20:00 and 21:45 on 8 October in Lisbon (UTC+1)
+  const FROM = Date.UTC(2026, 9, 8, 19, 0);
+  const TO = Date.UTC(2026, 9, 8, 20, 45);
+
+  function withLabel(): DayView {
+    const day = makeDay(DATE);
+    day.computerLabels = [{ id: 'l-1', categoryId: 'c-social', from: FROM, to: TO, minutes: 98 }];
+    return day;
+  }
+
+  it('lists each marked stretch with its category, times in the day zone and the time it took', async () => {
+    renderDay(withLabel());
+    const card = (await screen.findByText('Computer time')).closest('section') as HTMLElement;
+    const row = within(card).getByRole('button', { name: 'Remove Social 20:00 – 21:45' }).closest('li') as HTMLElement;
+    expect(row).toHaveTextContent('Social');
+    expect(row).toHaveTextContent('20:00 – 21:45');
+    expect(row).toHaveTextContent('1 h 38 min');
+  });
+
+  it('marks a stretch of the shown day and reloads it', async () => {
+    let days = 0;
+    const { find } = mockApi({
+      'GET /api/day': () => (++days === 1 ? reply(makeDay(DATE)) : reply(withLabel())),
+      'GET /api/categories': reply(CATEGORIES),
+      'POST /api/computer-labels': reply({ id: 'l-1', categoryId: 'c-social', from: FROM, to: TO }, 201),
+    });
+    render(<Day date={DATE} onDate={() => {}} revision={0} />);
+    await screen.findByTestId('headline');
+    await waitFor(() => expect(screen.getByLabelText('Category')).toHaveValue('c-social'));
+    fireEvent.change(screen.getByLabelText('From'), { target: { value: '20:00' } });
+    fireEvent.change(screen.getByLabelText('To'), { target: { value: '21:45' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Mark' }));
+
+    expect(await screen.findByText('1 h 38 min')).toBeInTheDocument();
+    expect(find('POST', '/api/computer-labels')[0].body).toEqual({ date: DATE, start: '20:00', end: '21:45', categoryId: 'c-social' });
+    expect(days).toBe(2);
+  });
+
+  it('never offers Uncategorized or Unattributed', async () => {
+    renderDay(makeDay(DATE));
+    await waitFor(() => expect(screen.getByLabelText('Category')).toHaveValue('c-social'));
+    const names = within(screen.getByLabelText('Category')).getAllByRole('option').map((o) => o.textContent);
+    expect(names).toContain('Work');
+    expect(names).toContain('Personal computer');
+    expect(names).not.toContain('Uncategorized');
+    expect(names).not.toContain('Unattributed');
+  });
+
+  it('says when a stretch ends the next day', async () => {
+    renderDay(makeDay(DATE));
+    await screen.findByTestId('headline');
+    fireEvent.change(screen.getByLabelText('From'), { target: { value: '23:00' } });
+    fireEvent.change(screen.getByLabelText('To'), { target: { value: '01:00' } });
+    expect(screen.getByText('Ends the next day at 01:00.')).toBeInTheDocument();
+  });
+
+  it('shows why the server refused a stretch', async () => {
+    mockApi({
+      'GET /api/day': reply(withLabel()),
+      'GET /api/categories': reply(CATEGORIES),
+      'POST /api/computer-labels': error(409, 'label_overlap', 'That stretch overlaps one already marked. Remove that one first.'),
+    });
+    render(<Day date={DATE} onDate={() => {}} revision={0} />);
+    await screen.findByTestId('headline');
+    await waitFor(() => expect(screen.getByLabelText('Category')).toHaveValue('c-social'));
+    fireEvent.change(screen.getByLabelText('From'), { target: { value: '21:00' } });
+    fireEvent.change(screen.getByLabelText('To'), { target: { value: '22:00' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Mark' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('overlaps one already marked');
+  });
+
+  it('removes a stretch and reloads the day', async () => {
+    let days = 0;
+    const { find } = mockApi({
+      'GET /api/day': () => (++days === 1 ? reply(withLabel()) : reply(makeDay(DATE))),
+      'GET /api/categories': reply(CATEGORIES),
+      'DELETE /api/computer-labels/*': reply(),
+    });
+    render(<Day date={DATE} onDate={() => {}} revision={0} />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Remove Social 20:00 – 21:45' }));
+    await waitFor(() => expect(screen.queryByText('20:00 – 21:45', { exact: false })).not.toBeInTheDocument());
+    expect(find('DELETE', '/api/computer-labels/l-1')).toHaveLength(1);
+    expect(days).toBe(2);
+  });
+
+  it('stays out of a day without a computer', async () => {
+    renderDay(makeDay(DATE, { empty: true }));
+    await screen.findByText('No screen time recorded on this day.');
+    expect(screen.queryByText('Computer time')).not.toBeInTheDocument();
   });
 });

@@ -181,6 +181,7 @@ export function makeDay(date: string, opts: DayOptions = {}): DayView {
           { subjectKey: 'app:com.google.android.gm', label: 'com.google.android.gm', posted: 24, tapped: 3, dismissed: 15 },
           { subjectKey: 'app:com.instagram.android', label: 'com.instagram.android', posted: 12, tapped: 5, dismissed: 2 },
         ],
+    computerLabels: [],
   };
 }
 

@@ -81,6 +81,16 @@ export interface NotificationCount {
   dismissed: number;
 }
 
+/** A stretch of computer time marked by hand: the computer time inside it takes the category. */
+export interface ComputerLabel {
+  id: string;
+  categoryId: string;
+  from: number;
+  to: number;
+  /** Computer time the stretch took on this day. */
+  minutes: number;
+}
+
 export interface Derivation {
   rebuilding: boolean;
   /** 0 to 1. */
@@ -99,6 +109,8 @@ export interface DayView {
   topSubjects: SubjectTotal[];
   unlocks: Unlocks;
   notifications: NotificationCount[];
+  /** Absent from a backend older than marked computer time. */
+  computerLabels?: ComputerLabel[];
 }
 
 // ---------------------------------------------------------------- trends
@@ -409,6 +421,11 @@ export const api = {
     request<Subject[]>(`/api/subjects${q(params)}`),
   mapSubject: (key: string, categoryId: string | null) =>
     request<Subject>(`/api/subjects/${seg(key)}/category`, { method: 'PUT', body: body({ categoryId }) }),
+
+  // computer time marked by hand
+  addComputerLabel: (input: { date: string; start: string; end: string; categoryId: string }) =>
+    request<Omit<ComputerLabel, 'minutes'>>('/api/computer-labels', { method: 'POST', body: body(input) }),
+  removeComputerLabel: (id: string) => request<void>(`/api/computer-labels/${seg(id)}`, { method: 'DELETE' }),
 
   // devices
   devices: () => request<Device[]>('/api/devices'),

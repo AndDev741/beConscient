@@ -149,10 +149,17 @@ export function instant(v: Instant | null | undefined): string {
   return new Date(t).toLocaleString(LOCALE, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 }
 
-export function timeOfDay(v: Instant): string {
+/** "14:05", in `zone` when given (the day's zone, which can differ from the browser's). */
+export function timeOfDay(v: Instant, zone?: string): string {
   const t = toMillis(v);
   if (t === null) return '—';
-  return new Date(t).toLocaleTimeString(LOCALE, { hour: '2-digit', minute: '2-digit' });
+  const opts: Intl.DateTimeFormatOptions = { hour: '2-digit', minute: '2-digit' };
+  try {
+    return new Date(t).toLocaleTimeString(LOCALE, zone ? { ...opts, timeZone: zone } : opts);
+  } catch {
+    // a zone the browser does not know
+    return new Date(t).toLocaleTimeString(LOCALE, opts);
+  }
 }
 
 /** "just now", "12 min ago", "3 h ago", "2 days ago". */
