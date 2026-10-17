@@ -2,6 +2,9 @@ package org.beconscient.collector.notifications
 
 import android.app.Notification
 import android.app.NotificationManager
+import android.content.ComponentName
+import android.content.Context
+import android.content.pm.PackageManager
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import org.beconscient.collector.AppGraph
@@ -65,5 +68,18 @@ class NotificationListener : NotificationListenerService() {
         @Volatile
         var connected: Boolean = false
             private set
+
+        /**
+         * Makes the system bind the listener again. MIUI drops the binding and
+         * nothing restores it until access is toggled by hand; requestRebind only
+         * undoes a requestUnbind, so this flips the component off and back to its
+         * manifest state, which the notification manager answers with a rebind.
+         */
+        fun rebind(context: Context) {
+            val pm = context.packageManager
+            val component = ComponentName(context, NotificationListener::class.java)
+            pm.setComponentEnabledSetting(component, PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP)
+            pm.setComponentEnabledSetting(component, PackageManager.COMPONENT_ENABLED_STATE_DEFAULT, PackageManager.DONT_KILL_APP)
+        }
     }
 }
