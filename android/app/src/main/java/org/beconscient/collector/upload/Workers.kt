@@ -16,6 +16,12 @@ class CollectWorker(context: Context, params: WorkerParameters) : CoroutineWorke
         // Each step runs even if an earlier one fails: a usage read that throws
         // must not also cost the health record that would report it.
         step("usage") { graph.usageReader.read() }
+        // A listener dropped while access is still granted is bound again within one run
+        step("rebind") {
+            if (!NotificationListener.connected && graph.probe.notificationAccess()) {
+                NotificationListener.rebind(applicationContext)
+            }
+        }
         step("heartbeat") { if (NotificationListener.connected) graph.notificationCollector.heartbeat() }
         step("health") {
             val lastHealth = graph.db.dao().long(Kv.HEALTH_LAST_AT) ?: 0L
