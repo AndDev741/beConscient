@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">beConscient</string>
+    <string name="launcher_label">beConscient home</string>
     <string name="notification_listener_label">beConscient notification counter</string>
     <string name="shorts_service_label">beConscient Shorts detector</string>
     <string name="shorts_service_description">Watches only the YouTube app and reads only the ids of on-screen layout elements, never text, to tell YouTube Shorts apart from the rest of YouTube. beConscient sends only "entered Shorts", "left Shorts" or "could not tell", with the YouTube version.</string>

@@ -91,6 +91,20 @@ Markers from the accessibility service that watches only the YouTube app.
 
 `unclassified` is emitted when YouTube is in the foreground and the detector cannot classify the screen, including when only part of the required signals is recognised beyond the stability window. The server treats a YouTube version with no `enter` marker yet as "unconfirmed" and shows it in the backstage view.
 
+### `android.pause` (point)
+
+One pause screen of the launcher, shown when the owner opens an app they chose to control. `at` is when the pause screen appeared.
+
+| Field | Type | Notes |
+|---|---|---|
+| `package` | string | Max 255. The app being opened. |
+| `outcome` | enum | `opened` (opened the app after the wait), `backed_out` (left without opening anything), `alternative` (opened the block's alternative app instead) |
+| `block` | string | Optional. Name of the block in force, as the owner typed it on the phone, max 60. Absent outside any block. |
+| `alternative` | string | Optional. Package of the alternative app the pause screen offered, max 255. |
+| `wait_ms` | integer | Time from the pause screen appearing to the owner's choice. |
+
+Never sent: the block's message, apps the owner did not choose to control.
+
 ### `desktop.activity` (interval)
 
 Active screen time on the computer, as decided by the agent's state machine.

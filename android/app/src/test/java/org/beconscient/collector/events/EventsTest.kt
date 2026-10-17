@@ -23,6 +23,7 @@ class EventsTest {
         Events.NOTIFICATION_POSTED to common + setOf("package", "ref", "is_update", "is_group_summary", "is_ongoing", "importance", "category"),
         Events.NOTIFICATION_REMOVED to common + setOf("package", "ref", "reason", "posted_at"),
         Events.SHORTS to common + setOf("state", "youtube_version", "youtube_version_code", "rules_version"),
+        Events.PAUSE to common + setOf("package", "outcome", "block", "alternative", "wait_ms"),
         Events.HEALTH to common + setOf("client_version", "sensors", "watermark", "queue_depth", "oldest_unsent_age_ms", "home_package"),
     )
 
@@ -33,6 +34,7 @@ class EventsTest {
         Events.notificationPosted(now, now, "com.whatsapp", "5d3c2b1a-0000-4000-8000-000000000001", false, false, false, 4, "msg"),
         Events.notificationRemoved(now, now, "com.whatsapp", "5d3c2b1a-0000-4000-8000-000000000001", Events.RemovalReason.CLICK, now - 1),
         Events.shorts(now, now, Events.ShortsState.ENTER, "19.40.33", 1549000000, 1),
+        Events.pause(now, now - 3200, "com.google.android.youtube", Events.PauseOutcome.ALTERNATIVE, "Before bed", "com.amazon.kindle", 3200),
         Events.health(
             now, "0.1.0",
             mapOf("usage" to Events.Sensor(Events.SensorState.OK, lastEventAt = now)),
@@ -75,6 +77,11 @@ class EventsTest {
         assertEquals(255, obj.str("package")!!.length)
         assertEquals(32, obj.str("category")!!.length)
         assertFalse("importance outside -1..5 is dropped", "importance" in obj)
+        val p = parse(Events.pause(now, now, "p".repeat(400), Events.PauseOutcome.OPENED, "b".repeat(80), "a".repeat(300), -5).payload)
+        assertEquals(255, p.str("package")!!.length)
+        assertEquals(60, p.str("block")!!.length)
+        assertEquals(255, p.str("alternative")!!.length)
+        assertEquals("a wait is never negative", "0", p["wait_ms"]!!.jsonPrimitive.content)
         val h = Events.health(now, "v".repeat(40), mapOf("usage" to Events.Sensor(Events.SensorState.STOPPED, "d".repeat(200))), null, 0, 0, null)
         val ho = parse(h.payload)
         assertEquals(32, ho.str("client_version")!!.length)

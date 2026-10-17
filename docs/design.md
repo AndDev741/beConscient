@@ -1,6 +1,6 @@
 # Design
 
-beConscient measures all of one person's screen time, on an Android phone and a Linux desktop, and shows it on a self-hosted web page. It exists to create an honest baseline before any attempt to reduce screen time. It measures and shows; it never blocks or nudges.
+beConscient measures all of one person's screen time, on an Android phone and a Linux desktop, and shows it on a self-hosted web page. It started as an honest baseline before any attempt to reduce screen time. The page and the computer only measure and show. On the phone, the collector can also be the home screen: for apps the owner chose, it shows a short pause before opening them. It never blocks an app.
 
 The wire formats live in [`contract/`](../contract). This document owns the rules that turn raw events into screen time.
 
@@ -12,6 +12,7 @@ flowchart TB
     A1[Usage reader] --> Q1[(Room queue)]
     A2[Notification listener] --> Q1
     A3[Shorts accessibility service] --> Q1
+    A4[Launcher pause screen] --> Q1
   end
   subgraph Desk[Desktop]
     X[Browser extension] --> H[Native messaging host]
@@ -69,6 +70,16 @@ Raw events are the source of truth. Screen-time segments are a projection that c
 - An **unlock** is each entry into screen-on-and-unlocked, with or without `KEYGUARD_HIDDEN`. Its first app is the first `ACTIVITY_RESUMED` of a non-launcher package within 60 seconds; otherwise it has none.
 - **Shorts**: the accessibility markers are intersected with YouTube segments. Time inside `enter`..`exit` becomes subject `app:com.google.android.youtube#shorts`. An open `enter` closes when YouTube leaves the foreground or the screen turns off. Without markers, time stays as YouTube.
 - **Notifications**: counted at read time. Updates, group summaries and ongoing notifications are excluded from "posted". A removal with reason `click` counts as tapped; `cancel` and `cancel_all` count as dismissed.
+- **Pauses**: stored as raw events only; they change no segment. When the collector is the home app, its own screens (home, app list, pause screen) are launcher time and go to `Unattributed`, like any launcher.
+
+### Launcher
+
+The collector can be set as the phone's home app. The home screen is text only: a clock, the block in force and a few pinned apps, with every app one swipe away.
+
+- The owner marks apps as **controlled** and defines **blocks** on the phone: a name, days, a start and an end, a message and an optional alternative app. A block whose end is at or before its start runs past midnight and belongs to the day it started.
+- Opening a controlled app from the launcher shows the **pause screen**: the message of the block in force, or "Is this important?" outside any block, and a 5-second countdown before the app can be opened. Going back and opening the alternative work from the first second.
+- Each pause sends one `android.pause` event with the app, the block name, the outcome and the wait. The message stays on the phone.
+- Apps opened from notifications, recents or links skip the launcher and get no pause.
 
 ### Desktop rules
 

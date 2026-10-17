@@ -12,5 +12,9 @@
   { "case": "unknown type is rejected", "expect": "rejected", "reason": "unknown_type",
     "event": { "id": "0192f3a1-0000-7000-8000-000000000106", "type": "android.location", "at": 1760089000000 } },
   { "case": "linkedin page kind outside the list is rejected", "expect": "rejected", "reason": "invalid_enum",
-    "event": { "id": "0192f3a1-0000-7000-8000-000000000107", "type": "browser.site", "start": 1760091300000, "end": 1760091600000, "rev": 1, "site": "linkedin", "browser": "chrome", "playing": false, "page_kind": "company-acme" } }
+    "event": { "id": "0192f3a1-0000-7000-8000-000000000107", "type": "browser.site", "start": 1760091300000, "end": 1760091600000, "rev": 1, "site": "linkedin", "browser": "chrome", "playing": false, "page_kind": "company-acme" } },
+  { "case": "pause message and typed text are dropped", "expect": "accepted_without", "fields": ["message", "reason_text"],
+    "event": { "id": "0192f3a1-0000-7000-8000-000000000108", "type": "android.pause", "at": 1760089500000, "package": "com.whatsapp", "outcome": "opened", "wait_ms": 5100, "message": "Family time", "reason_text": "replying" } },
+  { "case": "pause outcome outside the list is rejected", "expect": "rejected", "reason": "invalid_enum",
+    "event": { "id": "0192f3a1-0000-7000-8000-000000000109", "type": "android.pause", "at": 1760089500000, "package": "com.whatsapp", "outcome": "snoozed", "wait_ms": 5100 } }
 ]

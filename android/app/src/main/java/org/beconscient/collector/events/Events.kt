@@ -19,6 +19,7 @@ object Events {
     const val NOTIFICATION_POSTED = "android.notification_posted"
     const val NOTIFICATION_REMOVED = "android.notification_removed"
     const val SHORTS = "android.shorts"
+    const val PAUSE = "android.pause"
     const val HEALTH = "health"
 
     /** Usage kinds the contract accepts. */
@@ -35,6 +36,8 @@ object Events {
     enum class RemovalReason(val wire: String) { CLICK("click"), CANCEL("cancel"), CANCEL_ALL("cancel_all"), APP_CANCEL("app_cancel"), OTHER("other") }
 
     enum class ShortsState(val wire: String) { ENTER("enter"), EXIT("exit"), UNCLASSIFIED("unclassified") }
+
+    enum class PauseOutcome(val wire: String) { OPENED("opened"), BACKED_OUT("backed_out"), ALTERNATIVE("alternative") }
 
     enum class SensorState(val wire: String) { OK("ok"), STOPPED("stopped"), DISABLED("disabled"), UNKNOWN("unknown") }
 
@@ -134,6 +137,27 @@ object Events {
             put("rules_version", rulesVersion)
         }
         return EventRow(id = id, type = SHORTS, time = at, payload = payload, queuedAt = now)
+    }
+
+    /** One launcher pause. The block's message never leaves the phone. */
+    fun pause(
+        now: Long,
+        at: Long,
+        packageName: String,
+        outcome: PauseOutcome,
+        block: String?,
+        alternative: String?,
+        waitMs: Long,
+    ): EventRow {
+        val id = Uuid7.generate(now)
+        val payload = point(id, PAUSE, at) {
+            put("package", packageName.take(255))
+            put("outcome", outcome.wire)
+            if (!block.isNullOrEmpty()) put("block", block.take(60))
+            if (!alternative.isNullOrEmpty()) put("alternative", alternative.take(255))
+            put("wait_ms", waitMs.coerceAtLeast(0))
+        }
+        return EventRow(id = id, type = PAUSE, time = at, payload = payload, queuedAt = now)
     }
 
     fun health(
