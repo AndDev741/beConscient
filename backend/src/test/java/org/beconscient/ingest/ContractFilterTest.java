@@ -113,4 +113,23 @@ class ContractFilterTest {
         assertEquals("extension_brave", ContractFilter.sensorOf("browser.site",
                 (ObjectNode) Ev.JSON.createObjectNode().put("browser", "brave")));
     }
+
+    @Test
+    void pausesKeepTheirChoiceAndNeverTheMessage() {
+        ObjectNode pause = Ev.pause(1, "com.google.android.youtube", "alternative");
+        pause.put("block", "b".repeat(80));
+        pause.put("alternative", "com.amazon.kindle");
+        pause.put("message", "Before bed: Kindle");
+        ContractFilter.Accepted a = accepted(pause);
+        assertEquals(1, a.dropped());
+        assertFalse(a.payload().has("message"));
+        assertEquals(60, a.payload().get("block").asText().length());
+        assertEquals("com.amazon.kindle", a.payload().get("alternative").asText());
+        assertNull(a.naturalKey());
+        assertEquals("launcher", ContractFilter.sensorOf("android.pause", a.payload()));
+        assertEquals("invalid_enum", rejected(Ev.pause(1, "com.whatsapp", "snoozed")));
+        ObjectNode noPackage = Ev.pause(1, "com.whatsapp", "opened");
+        noPackage.remove("package");
+        assertEquals("missing_field", rejected(noPackage));
+    }
 }

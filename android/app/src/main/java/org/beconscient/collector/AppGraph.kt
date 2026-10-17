@@ -9,6 +9,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import org.beconscient.collector.events.TzMarkers
 import org.beconscient.collector.health.HealthReporter
+import org.beconscient.collector.launcher.LauncherStore
 import org.beconscient.collector.notifications.NotificationCollector
 import org.beconscient.collector.pairing.CredentialStore
 import org.beconscient.collector.pairing.PairingClient
@@ -50,6 +51,7 @@ class AppGraph(
     val maintenance = QueueMaintenance(db.dao(), clock)
     val health = HealthReporter(db.dao(), probe, clock, clientVersion)
     val pairing = PairingClient(config, transport, credentials, db.dao(), tzMarkers, clock, clientVersion)
+    val launcher = LauncherStore.android(app)
 
     /** Runs [block] off the main thread while keeping a receiver's broadcast alive. */
     fun runAsync(receiver: BroadcastReceiver, block: suspend () -> Unit) {

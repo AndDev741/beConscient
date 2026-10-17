@@ -76,6 +76,21 @@ class ManifestTest {
     }
 
     @Test
+    fun `the home screen answers the home intent in a task of its own`() {
+        val home = parse(mergedManifest()).children("activity")
+            .single { it.attr("name") == "org.beconscient.collector.launcher.HomeActivity" }
+        val filter = home.children("intent-filter").single()
+        assertEquals(listOf("android.intent.action.MAIN"), filter.children("action").map { it.attr("name") })
+        assertEquals(
+            setOf("android.intent.category.HOME", "android.intent.category.DEFAULT"),
+            filter.children("category").map { it.attr("name") }.toSet(),
+        )
+        assertEquals("singleTask", home.attr("launchMode"))
+        assertEquals("", home.attr("taskAffinity"))
+        assertEquals("true", home.attr("excludeFromRecents"))
+    }
+
+    @Test
     fun `nothing runs before the first unlock`() {
         val root = parse(mergedManifest())
         for (tag in listOf("application", "activity", "service", "receiver", "provider")) {

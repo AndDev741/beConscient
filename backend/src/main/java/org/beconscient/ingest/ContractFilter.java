@@ -41,12 +41,13 @@ public final class ContractFilter {
     public static final String NOTIFICATION_POSTED = "android.notification_posted";
     public static final String NOTIFICATION_REMOVED = "android.notification_removed";
     public static final String SHORTS = "android.shorts";
+    public static final String PAUSE = "android.pause";
     public static final String ACTIVITY = "desktop.activity";
     public static final String SITE = "browser.site";
     public static final String HEALTH = "health";
 
     public static final Set<String> TYPES = Set.of(USAGE, TZ_CHANGE, NOTIFICATION_POSTED, NOTIFICATION_REMOVED, SHORTS,
-            ACTIVITY, SITE, HEALTH);
+            PAUSE, ACTIVITY, SITE, HEALTH);
     public static final Set<String> INTERVAL_TYPES = Set.of(ACTIVITY, SITE);
 
     static final Set<String> USAGE_KINDS = Set.of("ACTIVITY_RESUMED", "ACTIVITY_PAUSED", "ACTIVITY_STOPPED",
@@ -56,6 +57,7 @@ public final class ContractFilter {
     static final Set<String> TZ_REASONS = Set.of("INITIAL", "TIMEZONE_CHANGED", "TIME_SET", "BOOT");
     static final Set<String> REMOVAL_REASONS = Set.of("click", "cancel", "cancel_all", "app_cancel", "other");
     static final Set<String> SHORTS_STATES = Set.of("enter", "exit", "unclassified");
+    static final Set<String> PAUSE_OUTCOMES = Set.of("opened", "backed_out", "alternative");
     static final Set<String> ACTIVITY_REASONS = Set.of("input", "inhibitor", "playing");
     static final Set<String> SITES = Set.of("youtube", "linkedin");
     static final Set<String> BROWSERS = Set.of("chrome", "brave", "other");
@@ -98,6 +100,8 @@ public final class ContractFilter {
                     enumOf("reason", REMOVAL_REASONS, true), integer("posted_at")),
             SHORTS, List.of(enumOf("state", SHORTS_STATES, true), str("youtube_version", 64),
                     integer("youtube_version_code"), integer("rules_version")),
+            PAUSE, List.of(reqStr("package", 255), enumOf("outcome", PAUSE_OUTCOMES, true), str("block", 60),
+                    str("alternative", 255), integer("wait_ms")),
             ACTIVITY, List.of(enumOf("reason", ACTIVITY_REASONS, true)),
             SITE, List.of(enumOf("site", SITES, true), enumOf("browser", BROWSERS, true), bool("playing"),
                     str("title", 300), enumOf("page_kind", PAGE_KINDS, false)),
@@ -435,6 +439,7 @@ public final class ContractFilter {
             case USAGE, TZ_CHANGE -> "usage";
             case NOTIFICATION_POSTED, NOTIFICATION_REMOVED -> "notifications";
             case SHORTS -> "shorts";
+            case PAUSE -> "launcher";
             case ACTIVITY -> "activity";
             case SITE -> "extension_" + payload.path("browser").asText("other");
             case HEALTH -> "health";

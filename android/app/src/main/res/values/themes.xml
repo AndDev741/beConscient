@@ -1,4 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="Theme.Collector" parent="android:Theme.Material.Light.NoActionBar" />
+
+    <!-- Black from the first frame, so the home screen never flashes white. -->
+    <style name="Theme.Collector.Home" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@android:color/black</item>
+    </style>
 </resources>

@@ -110,6 +110,14 @@ public final class Ev {
         return n;
     }
 
+    public static ObjectNode pause(long at, String pkg, String outcome) {
+        ObjectNode n = point("android.pause", at);
+        n.put("package", pkg);
+        n.put("outcome", outcome);
+        n.put("wait_ms", 5000);
+        return n;
+    }
+
     public static ObjectNode posted(long at, String pkg, String ref) {
         ObjectNode n = point("android.notification_posted", at);
         n.put("package", pkg);
