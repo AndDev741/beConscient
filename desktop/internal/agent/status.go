@@ -58,8 +58,8 @@ func WriteStatus(w io.Writer, in StatusInput) error {
 			label = "last known " + st.State
 		}
 		fmt.Fprintf(w, "State:        %s since %s\n", label, ago(in.Now, st.Since))
-		fmt.Fprintf(w, "              locked=%t video-or-call-inhibitor=%t playing=%t, updated %s\n",
-			st.Locked, st.Inhibited, st.Playing, ago(in.Now, st.UpdatedAt))
+		fmt.Fprintf(w, "              locked=%t idle-inhibitor=%t media-playing=%t playing=%t, updated %s\n",
+			st.Locked, st.Inhibited, st.Media, st.Playing, ago(in.Now, st.UpdatedAt))
 	} else {
 		fmt.Fprintln(w, "State:        unknown (the agent has not run yet)")
 	}

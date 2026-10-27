@@ -233,7 +233,7 @@ func TestSuspendWritesExpectedStopBeforeReleasingInhibitor(t *testing.T) {
 
 func TestNoForbiddenFieldsEverProduced(t *testing.T) {
 	h := newHarness(t, "")
-	h.src.Set(func(s *activitytest.Source) { s.Inhibited = true })
+	h.src.Set(func(s *activitytest.Source) { s.Inhibited, s.Media = true, true })
 	h.a.Start()
 	h.run(2*time.Minute, true)
 	h.send(1, siteMsg("0192f3a1-0000-7000-8000-0000000000a1", t0, t0.Add(time.Minute), true, true))

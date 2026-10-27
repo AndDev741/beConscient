@@ -88,8 +88,8 @@ The agent's state machine:
 ```mermaid
 stateDiagram-v2
   [*] --> Active
-  Active --> Idle: 5 min without input, no video or call
-  Active --> Passive: 5 min without input, video or call running
+  Active --> Idle: 5 min without input, no video playing
+  Active --> Passive: 5 min without input, video playing
   Passive --> Active: keyboard or mouse
   Passive --> Idle: video ends, or 2 h without input
   Idle --> Active: keyboard or mouse
@@ -104,7 +104,7 @@ stateDiagram-v2
 ```
 
 - Counted time is Active plus Passive. Entering Idle trims the open interval back to the last input, as a new revision.
-- "Video or call running" means a GNOME session idle inhibitor is active, or the extension reports a playing video.
+- "Video playing" means the extension reports a playing video, or a GNOME session idle inhibitor is active while an MPRIS media player reports `Playing`. Keep-awake tools and jobs left running (an agent working overnight) hold an idle inhibitor with nothing playing, so that time goes to Idle after 5 minutes. A call with no media player and no input for 5 minutes stops counting too.
 - **Classification**: active time inside the work window is `Work`; outside it, or on a non-working day, it is `Personal computer`.
 - **Marked stretches**: the owner can mark a stretch on the page with a category ("20:00 to 21:45, Study"). Computer time inside it takes that category, whatever the work window says. The agent never learns what was on screen, so this is the only way computer time gets a category of its own. Like the windows, marks are applied when reading. Site time inside a mark keeps its subject.
 - **Sites**: `browser.site` intervals are clipped to the agent's counted intervals, so the lock cut, idle and the 2-hour cap apply to them too. Clipped site time leaves `Work` or `Personal computer` and goes to the site's subject.

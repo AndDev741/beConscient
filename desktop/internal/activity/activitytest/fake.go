@@ -61,6 +61,8 @@ type Source struct {
 	LockedErr      error
 	Inhibited      bool
 	InhibitedErr   error
+	Media          bool
+	MediaErr       error
 	IdleErr        error
 
 	InhibitedCalls int
@@ -130,6 +132,13 @@ func (s *Source) IdleInhibited() (bool, error) {
 	defer s.mu.Unlock()
 	s.InhibitedCalls++
 	return s.Inhibited, s.InhibitedErr
+}
+
+// MediaPlaying implements activity.Source.
+func (s *Source) MediaPlaying() (bool, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.Media, s.MediaErr
 }
 
 // Signals implements activity.Source.

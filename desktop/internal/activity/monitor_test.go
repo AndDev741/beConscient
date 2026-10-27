@@ -167,7 +167,7 @@ func TestMonitorFallsBackToLockedHint(t *testing.T) {
 }
 
 func TestMonitorInhibitorSignalReadsOnlyTheFlag(t *testing.T) {
-	h := newHarness(t, nil)
+	h := newHarness(t, func(s *activitytest.Source) { s.Media = true })
 	h.run(time.Minute, true)
 	calls := h.src.InhibitedCalls
 	h.src.Set(func(s *activitytest.Source) { s.Inhibited = true })
@@ -179,9 +179,9 @@ func TestMonitorInhibitorSignalReadsOnlyTheFlag(t *testing.T) {
 	if h.mon.State() != activity.Passive {
 		t.Fatalf("state %s, want passive with an inhibitor", h.mon.State())
 	}
-	_, inhibited, _ := h.mon.Flags()
-	if !inhibited {
-		t.Fatal("inhibited flag not set")
+	_, inhibited, media, _ := h.mon.Flags()
+	if !inhibited || !media {
+		t.Fatalf("flags inhibited=%t media=%t, want both set", inhibited, media)
 	}
 	open, _ := h.mon.Open()
 	if open.Reason != activity.ReasonInhibitor {
@@ -191,6 +191,68 @@ func TestMonitorInhibitorSignalReadsOnlyTheFlag(t *testing.T) {
 	h.mon.Handle(activity.Signal{Kind: activity.SigInhibitors})
 	if h.mon.State() != activity.Idle {
 		t.Fatalf("state %s after the inhibitor ends, want idle", h.mon.State())
+	}
+}
+
+func TestMonitorInhibitorWithoutMediaGoesIdle(t *testing.T) {
+	// A keep-awake tool or a job left running overnight holds an idle
+	// inhibitor with nothing playing and nobody at the keyboard.
+	h := newHarness(t, func(s *activitytest.Source) { s.Inhibited = true })
+	h.run(time.Minute, true)
+	h.run(2*time.Hour, false)
+	if h.mon.State() != activity.Idle {
+		t.Fatalf("state %s, want idle with an inhibitor and no media playing", h.mon.State())
+	}
+	var counted time.Duration
+	for _, iv := range h.last() {
+		if iv.Reason != activity.ReasonInput {
+			t.Fatalf("interval %+v counted without input", iv)
+		}
+		counted += iv.Duration()
+	}
+	if counted != time.Minute {
+		t.Fatalf("counted %v, want only the minute of input", counted)
+	}
+}
+
+func TestMonitorMediaPauseEndsPassive(t *testing.T) {
+	h := newHarness(t, func(s *activitytest.Source) { s.Inhibited, s.Media = true, true })
+	h.run(time.Minute, true)
+	h.run(30*time.Minute, false)
+	if h.mon.State() != activity.Passive {
+		t.Fatalf("state %s, want passive while a player plays", h.mon.State())
+	}
+	h.src.Set(func(s *activitytest.Source) { s.Media = false })
+	pausedAt := h.clock.Now().Add(5 * time.Second)
+	h.run(5*time.Second, false)
+	if h.mon.State() != activity.Idle {
+		t.Fatalf("state %s after the player paused, want idle", h.mon.State())
+	}
+	for _, iv := range h.last() {
+		if iv.Reason == activity.ReasonInhibitor && !iv.End.Equal(pausedAt) {
+			t.Fatalf("inhibitor interval %+v should end at the poll that saw the pause, %v", iv, pausedAt)
+		}
+	}
+}
+
+func TestMonitorMediaFailureIsLoudAndConservative(t *testing.T) {
+	h := newHarness(t, func(s *activitytest.Source) { s.Inhibited, s.Media = true, true })
+	h.run(time.Minute, true)
+	h.src.Set(func(s *activitytest.Source) { s.MediaErr = errors.New("org.freedesktop.DBus.Error.NoReply") })
+	h.run(10*time.Minute, false)
+	if h.mon.State() != activity.Idle {
+		t.Fatalf("state %s, want idle when the players cannot be read", h.mon.State())
+	}
+	if c := strings.Count(h.logs.String(), "listing MPRIS players failed"); c != 1 {
+		t.Fatalf("failure logged %d times, want once", c)
+	}
+	if s := h.mon.Sensor(); !strings.Contains(s.Detail, "media players unavailable") {
+		t.Fatalf("sensor %+v should name the media players", s)
+	}
+	h.src.Set(func(s *activitytest.Source) { s.MediaErr = nil })
+	h.run(5*time.Second, true)
+	if h.mon.Sensor().Detail != "" {
+		t.Fatalf("sensor detail %q after recovery", h.mon.Sensor().Detail)
 	}
 }
 

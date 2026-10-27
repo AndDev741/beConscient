@@ -31,10 +31,12 @@ type Monitor struct {
 	lockBroken    bool
 	locked        bool
 	inhibited     bool
+	media         bool
 	playing       map[uint64]bool
 
 	idleBroken    bool
 	inhibitBroken bool
+	mediaBroken   bool
 	lastIdleOK    time.Time
 }
 
@@ -55,7 +57,7 @@ func (mo *Monitor) emit(ivs []Interval) {
 	}
 }
 
-// Start reads the initial lock, inhibitor and idle state and starts the
+// Start reads the initial lock, inhibitor, media and idle state and starts the
 // machine. When org.gnome.ScreenSaver is unavailable it falls back to the
 // logind session's LockedHint.
 func (mo *Monitor) Start() {
@@ -63,9 +65,15 @@ func (mo *Monitor) Start() {
 	mo.locked = mo.readLock()
 	if inh, err := mo.src.IdleInhibited(); err != nil {
 		mo.inhibitBroken = true
-		mo.log.Error("D-Bus: org.gnome.SessionManager.IsInhibited failed; video and calls will not keep the agent passive", "err", err)
+		mo.log.Error("D-Bus: org.gnome.SessionManager.IsInhibited failed; video players will not keep the agent passive", "err", err)
 	} else {
 		mo.inhibited = inh
+	}
+	if media, err := mo.src.MediaPlaying(); err != nil {
+		mo.mediaBroken = true
+		mo.log.Error("D-Bus: listing MPRIS players failed; an idle inhibitor alone will not count", "err", err)
+	} else {
+		mo.media = media
 	}
 	idle, err := mo.src.IdleTime()
 	if err != nil {
@@ -75,10 +83,10 @@ func (mo *Monitor) Start() {
 	} else {
 		mo.lastIdleOK = now
 	}
-	mo.emit(mo.m.Start(now, idle, mo.locked, mo.inhibited, mo.anyPlaying()))
+	mo.emit(mo.m.Start(now, idle, mo.locked, mo.videoInhibitor(), mo.anyPlaying()))
 	mo.lastWall, mo.lastMono, mo.havePoll = now, mo.clock.Mono(), true
 	mo.log.Info("activity monitor started", "state", mo.m.State().String(), "locked", mo.locked,
-		"lock_source", mo.lockSource(), "inhibited", mo.inhibited)
+		"lock_source", mo.lockSource(), "inhibited", mo.inhibited, "media", mo.media)
 }
 
 func (mo *Monitor) readLock() bool {
@@ -115,9 +123,9 @@ func (mo *Monitor) lockSource() string {
 	return "org.gnome.ScreenSaver"
 }
 
-// Poll reads the idle time (and the fallback lock state and the inhibitor
-// flag) and advances the machine. A wall-clock jump of more than 15 seconds
-// closes the open interval.
+// Poll reads the idle time (and the fallback lock state, the inhibitor flag
+// and the media players) and advances the machine. A wall-clock jump of more
+// than 15 seconds closes the open interval.
 func (mo *Monitor) Poll() {
 	now, mono := mo.clock.Now(), mo.clock.Mono()
 	jumped := false
@@ -146,6 +154,7 @@ func (mo *Monitor) Poll() {
 	}
 
 	mo.refreshInhibited(now)
+	mo.refreshMedia(now)
 	if mo.useLockedHint {
 		if v := mo.readLock(); v != mo.locked {
 			mo.locked = v
@@ -174,9 +183,36 @@ func (mo *Monitor) refreshInhibited(now time.Time) {
 	mo.inhibitBroken = false
 	if inh != mo.inhibited {
 		mo.inhibited = inh
-		mo.emit(mo.m.SetInhibited(now, inh))
+		mo.emit(mo.m.SetInhibited(now, mo.videoInhibitor()))
 	}
 }
+
+// refreshMedia re-reads the MPRIS players. While they cannot be read nothing
+// counts as playing.
+func (mo *Monitor) refreshMedia(now time.Time) {
+	media, err := mo.src.MediaPlaying()
+	if err != nil {
+		if !mo.mediaBroken {
+			mo.log.Error("D-Bus: listing MPRIS players failed; an idle inhibitor alone will not count", "err", err)
+		}
+		mo.mediaBroken = true
+		media = false
+	} else {
+		if mo.mediaBroken {
+			mo.log.Info("D-Bus: MPRIS players readable again")
+		}
+		mo.mediaBroken = false
+	}
+	if media != mo.media {
+		mo.media = media
+		mo.emit(mo.m.SetInhibited(now, mo.videoInhibitor()))
+	}
+}
+
+// videoInhibitor is the machine's inhibitor flag: an idle inhibitor counts
+// only while a media player is playing. Keep-awake tools and long jobs hold
+// one too, with nobody watching.
+func (mo *Monitor) videoInhibitor() bool { return mo.inhibited && mo.media }
 
 // Handle reacts to one signal.
 func (mo *Monitor) Handle(sig Signal) {
@@ -243,9 +279,10 @@ func (mo *Monitor) Since() time.Time { return mo.m.Since() }
 // Open returns the open interval cut at now.
 func (mo *Monitor) Open() (Interval, bool) { return mo.m.Open(mo.clock.Now()) }
 
-// Flags returns the latest lock, inhibitor and playing flags.
-func (mo *Monitor) Flags() (locked, inhibited, playing bool) {
-	return mo.locked, mo.inhibited, mo.anyPlaying()
+// Flags returns the latest lock, inhibitor, media player and extension
+// playing flags.
+func (mo *Monitor) Flags() (locked, inhibited, media, playing bool) {
+	return mo.locked, mo.inhibited, mo.media, mo.anyPlaying()
 }
 
 // Sensor returns the activity sensor for the health record.
@@ -264,6 +301,9 @@ func (mo *Monitor) Sensor() events.Sensor {
 	}
 	if mo.inhibitBroken {
 		notes = append(notes, "inhibitors unavailable")
+	}
+	if mo.mediaBroken {
+		notes = append(notes, "media players unavailable")
 	}
 	s.Detail = events.Truncate(strings.Join(notes, "; "), 120)
 	if !mo.lastIdleOK.IsZero() {

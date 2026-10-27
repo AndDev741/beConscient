@@ -40,6 +40,7 @@ type StateRecord struct {
 	UpdatedAt int64  `json:"updated_at"`
 	Locked    bool   `json:"locked"`
 	Inhibited bool   `json:"inhibited"`
+	Media     bool   `json:"media"`
 	Playing   bool   `json:"playing"`
 	Running   bool   `json:"running"`
 }
@@ -340,9 +341,9 @@ func (a *Agent) saveState(force bool) {
 		return
 	}
 	a.lastState, a.saved = st, true
-	locked, inhibited, playing := a.mon.Flags()
+	locked, inhibited, media, playing := a.mon.Flags()
 	rec := StateRecord{State: st.String(), Since: a.mon.Since().UnixMilli(), UpdatedAt: a.o.Clock.Now().UnixMilli(),
-		Locked: locked, Inhibited: inhibited, Playing: playing, Running: true}
+		Locked: locked, Inhibited: inhibited, Media: media, Playing: playing, Running: true}
 	if err := a.o.Queue.SetMetaJSON(MetaState, rec); err != nil {
 		a.o.Log.Error("save state", "err", err)
 	}
