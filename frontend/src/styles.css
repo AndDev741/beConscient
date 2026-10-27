@@ -286,6 +286,8 @@ tr.flagged td:first-child { box-shadow: inset 3px 0 0 var(--warn); padding-left:
 .hcol:focus-visible .hit { fill: var(--surface-3); stroke: var(--focus); stroke-width: 2; }
 .hcol.sel .tick { fill: var(--ink); font-weight: 650; }
 .tbar { fill: var(--accent); }
+.hsvg .cval { fill: var(--ink-2); font-size: 11.5px; font-weight: 600; font-family: var(--font); font-variant-numeric: tabular-nums; }
+.hcol.sel .cval { fill: var(--ink); }
 .tbar.out { fill: transparent; stroke: var(--ink-3); stroke-width: 1.2; stroke-dasharray: 3 2; }
 .hdetail { background: var(--surface-2); border: 1px solid var(--hair); border-radius: var(--r-ctl); padding: 8px 12px; }
 .hdhead { display: flex; justify-content: space-between; gap: 10px; font-size: 14px; padding: 2px 0 4px; }

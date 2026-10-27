@@ -66,16 +66,23 @@ fun rememberNow(): LocalDateTime {
 
 private const val MINUTE_MS = 60_000L
 
-/** Clock, the block in force and the pinned apps as text. Swipe up for every app. */
+/**
+ * Clock, the block in force, today's focus and the pinned apps as text. Swipe
+ * up for every app. [breakLeft] is the time left in a break and the length of
+ * the round after it.
+ */
 @Composable
 fun HomeScreen(
     now: LocalDateTime,
     settings: LauncherSettings,
     apps: List<LaunchableApp>,
+    breakLeft: Pair<Long, Long>?,
+    today: String?,
     onOpen: (LaunchableApp) -> Unit,
     onMenu: (LaunchableApp) -> Unit,
     onAllApps: () -> Unit,
     onSettings: () -> Unit,
+    onFocus: () -> Unit,
 ) {
     val context = LocalContext.current
     val timePattern = if (DateFormat.is24HourFormat(context)) "HH:mm" else "h:mm"
@@ -111,6 +118,14 @@ fun HomeScreen(
             Spacer(Modifier.height(12.dp))
             Text("${block.range()} · ${block.name}", fontSize = 16.sp)
         }
+        if (breakLeft != null) {
+            Spacer(Modifier.height(12.dp))
+            Text("Break · ${mmss(breakLeft.first)} left, then ${breakLeft.second / 60_000} min of focus", fontSize = 16.sp)
+        }
+        if (today != null) {
+            Spacer(Modifier.height(12.dp))
+            Text(today, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 16.sp)
+        }
         Spacer(Modifier.weight(1f))
         if (pinned.isEmpty()) {
             Text(
@@ -133,6 +148,7 @@ fun HomeScreen(
         Spacer(Modifier.weight(1f))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             TextButton(onClick = onSettings) { Text("settings", color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            if (breakLeft == null) TextButton(onClick = onFocus) { Text("focus", color = MaterialTheme.colorScheme.onSurfaceVariant) }
             TextButton(onClick = onAllApps) { Text("all apps", color = MaterialTheme.colorScheme.onSurfaceVariant) }
         }
     }
@@ -197,13 +213,15 @@ fun AllAppsScreen(
     }
 }
 
-/** Long-press menu: pin to home, pause before opening, app info. */
+/** Long-press menu: pin to home, pause before opening, allow during focus, app info. */
 @Composable
 fun AppMenu(
     app: LaunchableApp,
     settings: LauncherSettings,
+    allowedInFocus: Boolean,
     onTogglePinned: () -> Unit,
     onToggleControlled: () -> Unit,
+    onToggleAllowed: () -> Unit,
     onAppInfo: () -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -216,6 +234,7 @@ fun AppMenu(
             Column {
                 MenuItem(if (pinned) "Unpin from home" else "Pin to home", onTogglePinned)
                 MenuItem(if (controlled) "Stop pausing before opening" else "Pause before opening", onToggleControlled)
+                MenuItem(if (allowedInFocus) "Block during focus" else "Allow during focus", onToggleAllowed)
                 MenuItem("App info", onAppInfo)
             }
         },

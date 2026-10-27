@@ -73,6 +73,49 @@ class PausesTest {
     }
 
     @Test
+    fun `the wait doubles with each pause of the day up to a minute`() {
+        assertEquals(listOf(5_000L, 10_000L, 20_000L, 40_000L, 60_000L, 60_000L), (1..6).map { Pauses.waitFor(it) })
+        val third = Pauses.decide(settings, youtube, noon, PauseCounts.Today(2, 1_000L))!!
+        assertEquals(3, third.openCount)
+        assertEquals(20_000L, third.waitMs)
+        assertEquals(1_000L, third.previousAt)
+    }
+
+    @Test
+    fun `pause counts start again on a new day`() {
+        val counts = PauseCounts(context().getSharedPreferences("pause-counts-test", 0).also { it.edit().clear().commit() })
+        val day = noon.toLocalDate()
+        counts.shown(youtube, day, 1L)
+        counts.shown(youtube, day, 2L)
+        counts.shown(kindle, day, 3L)
+        assertEquals(PauseCounts.Today(2, 2L), counts.today(youtube, day))
+        assertEquals(PauseCounts.Today(0, null), counts.today(youtube, day.plusDays(1)))
+    }
+
+    @Test
+    fun `the pause screen says how often the app was opened today`() {
+        val first = Pauses.decide(settings, youtube, noon)!!
+        assertEquals("First time today", timesToday(first, 0))
+        val fourth = Pauses.decide(settings, youtube, noon, PauseCounts.Today(3, 0L))!!
+        assertEquals("4th time today, the last one 12 min ago", timesToday(fourth, 12 * 60_000L))
+        assertEquals("2nd time today, the last one just now", timesToday(fourth.copy(openCount = 2), 30_000L))
+    }
+
+    @Test
+    fun `an opened app is queued with the reason and the imposed wait`() = runBlocking {
+        val log = PauseLog(db.dao(), clock)
+        val pause = Pauses.decide(settings, youtube, noon, PauseCounts.Today(1, 0L))!!
+        val shownAt = clock.now
+        clock.advance(11_000)
+        log.record(pause, shownAt, Events.PauseOutcome.OPENED, Events.PauseIntent.SPECIFIC)
+        val o = parse(db.dao().pendingOldestFirst(10).single().payload)
+        assertEquals("opened", o.str("outcome"))
+        assertEquals("specific", o.str("intent"))
+        assertEquals("10000", o["required_wait_ms"].toString())
+        assertEquals("2", o["open_count"].toString())
+    }
+
+    @Test
     fun `a pause is queued with its outcome and wait but not its message`() = runBlocking {
         val log = PauseLog(db.dao(), clock)
         val shownAt = clock.now

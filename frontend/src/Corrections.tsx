@@ -13,6 +13,7 @@ export const EVENT_TYPES: { type: string; fields: string[] }[] = [
   { type: 'android.notification_removed', fields: [] },
   { type: 'android.shorts', fields: [] },
   { type: 'android.pause', fields: ['block'] },
+  { type: 'android.focus', fields: ['block'] },
   { type: 'android.tz_change', fields: [] },
   { type: 'desktop.activity', fields: [] },
   { type: 'health', fields: ['home_package'] },

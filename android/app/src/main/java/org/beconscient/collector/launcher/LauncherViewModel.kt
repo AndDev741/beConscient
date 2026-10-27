@@ -11,6 +11,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.beconscient.collector.AppGraph
 import org.beconscient.collector.events.Events
+import org.beconscient.collector.focus.BlockedApp
+import org.beconscient.collector.focus.FocusPhase
+import org.beconscient.collector.focus.FocusRecord
+import org.beconscient.collector.focus.FocusToday
 import java.time.LocalDateTime
 
 sealed interface Screen {
@@ -29,8 +33,12 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     private val graph = AppGraph.get(application)
     private val store = graph.launcher
     private val log = PauseLog(graph.db.dao(), graph.clock)
+    private val focus = graph.focus
 
     val settings: StateFlow<LauncherSettings> = store.settings
+    val phase: StateFlow<FocusPhase> = focus.phase
+    val history: StateFlow<List<FocusRecord>> = focus.history
+    val lastBlocked: StateFlow<BlockedApp?> = focus.lastBlocked
 
     private val _apps = MutableStateFlow<List<LaunchableApp>>(emptyList())
     val apps: StateFlow<List<LaunchableApp>> = _apps.asStateFlow()
@@ -49,30 +57,69 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         _screen.value = screen
     }
 
-    /** Opens [app] straight away, or puts the pause screen in front of it when the owner controls it. */
+    /** Moves the focus phase forward; the home screen calls it when it comes back and every second while counting down. */
+    fun refreshFocus() {
+        focus.refresh()
+    }
+
+    /**
+     * Opens [app] straight away, or puts the pause screen in front of it when the
+     * owner controls it. During a focus period a blocked app does not open at all.
+     */
     fun open(context: Context, app: LaunchableApp) {
-        val pause = Pauses.decide(store.settings.value, app.packageName, LocalDateTime.now())
+        if (focus.blocks(app.packageName)) {
+            focus.onBlocked(app.packageName)
+            return
+        }
+        val now = LocalDateTime.now()
+        val today = graph.pauseCounts.today(app.packageName, now.toLocalDate())
+        val pause = Pauses.decide(store.settings.value, app.packageName, now, today)
         if (pause == null) {
             launch(context, app)
             return
         }
+        val shownAt = graph.clock.now()
+        graph.pauseCounts.shown(app.packageName, now.toLocalDate(), shownAt)
         // Offer the alternative only when it is installed, and report only what was offered
         val alternative = pause.alternative?.let { pkg -> _apps.value.firstOrNull { it.packageName == pkg } }
-        _pause.value = PauseUi(pause.copy(alternative = alternative?.packageName), app, alternative, graph.clock.now())
+        _pause.value = PauseUi(pause.copy(alternative = alternative?.packageName), app, alternative, shownAt)
     }
 
-    /** The owner's answer on the pause screen. Opening the app itself is refused until the wait is over. */
-    fun choose(context: Context, outcome: Events.PauseOutcome) {
+    /**
+     * The owner's answer on the pause screen. Opening the app itself is refused
+     * until the wait is over and needs a reason.
+     */
+    fun choose(context: Context, outcome: Events.PauseOutcome, intent: Events.PauseIntent? = null) {
         val p = _pause.value ?: return
-        if (outcome == Events.PauseOutcome.OPENED && graph.clock.now() - p.shownAt < Pauses.WAIT_MS) return
+        if (outcome == Events.PauseOutcome.OPENED && (intent == null || graph.clock.now() - p.shownAt < p.pause.waitMs)) return
         _pause.value = null
-        viewModelScope.launch { log.record(p.pause, p.shownAt, outcome) }
+        viewModelScope.launch { log.record(p.pause, p.shownAt, outcome, intent) }
         when (outcome) {
             Events.PauseOutcome.OPENED -> launch(context, p.app)
             Events.PauseOutcome.ALTERNATIVE -> p.alternative?.let { launch(context, it) }
+            Events.PauseOutcome.REST -> {
+                focus.startRest()
+                _screen.value = Screen.Home
+            }
             Events.PauseOutcome.BACKED_OUT -> Unit
         }
     }
+
+    fun startFocus(minutes: Int) {
+        focus.startManual(minutes)
+        _screen.value = Screen.Home
+    }
+
+    fun decide(next: Events.FocusNext) {
+        focus.decide(next)
+    }
+
+    fun today(): FocusToday = focus.today()
+
+    /** The apps a focus period lets through, as the settings show them. */
+    fun focusAllowed(): Set<String> = focus.allowed()
+
+    fun toggleFocusAllowed(pkg: String) = store.toggleFocusAllowed(pkg, focus.allowed())
 
     /** Screen off or another app on top: a pause still showing counts as backing out. */
     fun backOutOfPause(context: Context) {
@@ -83,6 +130,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     fun leave(context: Context) {
         backOutOfPause(context)
         _screen.value = Screen.Home
+        focus.refresh()
     }
 
     fun togglePinned(pkg: String) = store.togglePinned(pkg)

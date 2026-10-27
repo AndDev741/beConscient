@@ -1,5 +1,6 @@
 package org.beconscient.view;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.security.TestSecurity;
@@ -358,6 +359,92 @@ class DayResourceTest {
         given().when().get("/api/day").then().statusCode(200).body("date", org.hamcrest.Matchers.is("2026-10-10"));
         given().queryParam("date", "10/06/2026").when().get("/api/day").then().statusCode(400)
                 .body("error", org.hamcrest.Matchers.is("bad_request"));
+    }
+
+    @Test
+    void theLauncherIsCountedPerLocalDayFromRawEvents() {
+        String insta = "com.instagram.android";
+        ObjectNode first = Ev.focus(lisbon("2026-10-06T09:00"), "manual", lisbon("2026-10-06T09:45"));
+        first.put("next", "break");
+        first.put("blocked_opens", 3);
+        first.put("held_notifications", 5);
+        ObjectNode second = Ev.focus(lisbon("2026-10-06T09:50"), "manual", lisbon("2026-10-06T10:35"));
+        second.put("cycle", 2);
+        second.put("blocked_opens", 1);
+        second.put("held_notifications", 2);
+        ObjectNode scheduled = Ev.focus(lisbon("2026-10-06T21:00"), "scheduled", lisbon("2026-10-06T23:30"));
+        scheduled.put("block", "Before bed");
+        JsonNode receipt = phone.ok(first, second, scheduled,
+                Ev.focus(lisbon("2026-10-06T14:00"), "rest", lisbon("2026-10-06T14:03")),
+                // Runs past midnight: counts, minutes and all, on the day it started
+                Ev.focus(lisbon("2026-10-06T23:40"), "manual", lisbon("2026-10-07T00:20")),
+                Ev.focus(lisbon("2026-10-07T00:30"), "manual", lisbon("2026-10-07T01:00")),
+                Ev.focus(lisbon("2026-10-02T10:00"), "manual", lisbon("2026-10-02T10:30")),
+                Ev.pause(lisbon("2026-10-06T08:00"), insta, "opened", "reply"),
+                Ev.pause(lisbon("2026-10-06T12:00"), insta, "opened", "habit"),
+                Ev.pause(lisbon("2026-10-06T12:30"), insta, "opened"),
+                Ev.pause(lisbon("2026-10-06T13:00"), insta, "backed_out"),
+                Ev.pause(lisbon("2026-10-06T13:59"), insta, "rest"),
+                Ev.pause(lisbon("2026-10-06T22:00"), insta, "alternative"));
+        for (int i = 0; i < receipt.get("results").size(); i++) {
+            assertEquals("accepted", FakeCollector.status(receipt, i));
+        }
+
+        JsonPath d = day("2026-10-06");
+        // The rest shows only under byKind, as on the phone
+        assertEquals(4, d.getInt("launcher.focus.periods"));
+        assertEquals(3, d.getInt("launcher.focus.byKind.manual"));
+        assertEquals(1, d.getInt("launcher.focus.byKind.scheduled"));
+        assertEquals(1, d.getInt("launcher.focus.byKind.rest"));
+        assertEquals(45 + 45 + 150 + 40, d.getInt("launcher.focus.minutes"));
+        assertEquals(4, d.getInt("launcher.focus.blockedOpens"));
+        assertEquals(7, d.getInt("launcher.focus.heldNotifications"));
+        assertEquals(6, d.getInt("launcher.pauses.shown"));
+        assertEquals(3, d.getInt("launcher.pauses.byOutcome.opened"));
+        assertEquals(1, d.getInt("launcher.pauses.byOutcome.backedOut"));
+        assertEquals(1, d.getInt("launcher.pauses.byOutcome.alternative"));
+        assertEquals(1, d.getInt("launcher.pauses.byOutcome.rest"));
+        assertEquals(1, d.getInt("launcher.pauses.byIntent.reply"));
+        assertEquals(0, d.getInt("launcher.pauses.byIntent.specific"));
+        assertEquals(1, d.getInt("launcher.pauses.byIntent.habit"));
+        // Seven days ending on the shown one
+        assertEquals(List.of("2026-09-30", "2026-10-01", "2026-10-02", "2026-10-03", "2026-10-04", "2026-10-05", "2026-10-06"),
+                d.getList("launcher.recent.date"));
+        assertEquals(List.of(0, 0, 1, 0, 0, 0, 4), d.getList("launcher.recent.focusPeriods", Integer.class));
+        assertEquals(30, d.getInt("launcher.recent[2].focusMinutes"));
+        assertEquals(1, day("2026-10-07").getInt("launcher.focus.periods"));
+        assertEquals(30, day("2026-10-07").getInt("launcher.focus.minutes"));
+
+        // Pauses and focus periods never become screen time
+        data.derive();
+        assertEquals(0, day("2026-10-06").getInt("totals.screenMinutes"));
+
+        // Suspect events and excluded ones are left out, as for notifications
+        data.update("update raw_events set suspect = true where type = 'android.focus' and payload->>'kind' = 'rest'");
+        String phoneId = data.jdbc().one("select id::text from devices where name = 'Phone'", rs -> rs.getString(1)).orElseThrow();
+        given().contentType(ContentType.JSON)
+                .body("{\"deviceId\":\"" + phoneId + "\",\"type\":\"android.pause\",\"from\":" + lisbon("2026-10-06T12:00")
+                        + ",\"to\":" + lisbon("2026-10-06T13:00") + ",\"note\":\"lent the phone\"}")
+                .when().post("/api/corrections/exclusions").then().statusCode(200);
+        JsonPath after = day("2026-10-06");
+        assertEquals(4, after.getInt("launcher.focus.periods"));
+        assertEquals(0, after.getInt("launcher.focus.byKind.rest"));
+        assertEquals(3, after.getInt("launcher.pauses.shown"));
+        assertEquals(1, after.getInt("launcher.pauses.byOutcome.opened"));
+        assertEquals(0, after.getInt("launcher.pauses.byIntent.habit"));
+    }
+
+    @Test
+    void theLauncherFollowsThePhonesZone() {
+        phone.tz = "America/Sao_Paulo";
+        phone.ok(Ev.tz(Ev.utc("2026-10-05T12:00:00Z"), "America/Sao_Paulo", -180));
+        // 02:00 UTC on the 7th is 23:00 on the 6th in São Paulo
+        phone.ok(Ev.focus(Ev.utc("2026-10-07T02:00:00Z"), "manual", Ev.utc("2026-10-07T02:25:00Z")));
+        assertEquals(1, day("2026-10-06").getInt("launcher.focus.periods"));
+        JsonPath seventh = day("2026-10-07");
+        assertEquals(0, seventh.getInt("launcher.focus.periods"));
+        assertEquals(List.of(1, 0), seventh.getList("launcher.recent.focusPeriods", Integer.class).subList(5, 7));
+        assertEquals(0, day("2026-10-01").getInt("launcher.pauses.shown"), "an empty day has zeros, not nulls");
     }
 
     /** Names used by the headline test. */

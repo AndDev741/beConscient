@@ -132,4 +132,61 @@ class ContractFilterTest {
         noPackage.remove("package");
         assertEquals("missing_field", rejected(noPackage));
     }
+
+    @Test
+    void pausesCarryTheReasonAndTheGrowingWait() {
+        ObjectNode opened = Ev.pause(1, "com.instagram.android", "opened", "habit");
+        opened.put("required_wait_ms", 20_000);
+        opened.put("open_count", 3);
+        ContractFilter.Accepted a = accepted(opened);
+        assertEquals(0, a.dropped());
+        assertEquals("habit", a.payload().get("intent").asText());
+        assertEquals(20_000, a.payload().get("required_wait_ms").asLong());
+        assertEquals(3, a.payload().get("open_count").asInt());
+        assertEquals("rest", accepted(Ev.pause(1, "com.instagram.android", "rest")).payload().get("outcome").asText());
+        // A reason belongs to an opening only
+        ContractFilter.Accepted backedOut = accepted(Ev.pause(1, "com.instagram.android", "backed_out", "reply"));
+        assertFalse(backedOut.payload().has("intent"));
+        assertEquals(1, backedOut.dropped());
+        assertEquals("invalid_enum", rejected(Ev.pause(1, "com.instagram.android", "opened", "boredom")));
+    }
+
+    @Test
+    void focusPeriodsKeepTheirCountsAndNeverTheApps() {
+        ObjectNode manual = Ev.focus(1_000, "manual", 1_000 + 25 * Ev.MIN);
+        manual.put("next", "break");
+        manual.put("cycle", 2);
+        manual.put("blocked_opens", 4);
+        manual.put("held_notifications", 11);
+        manual.putArray("allowed_apps").add("com.amazon.kindle");
+        manual.put("block", "Deep work");
+        ContractFilter.Accepted a = accepted(manual);
+        assertFalse(a.interval());
+        assertEquals(1_000, a.ts());
+        assertEquals(2, a.dropped(), "the allowed apps, and a block name outside a scheduled period");
+        assertFalse(a.payload().has("allowed_apps"));
+        assertFalse(a.payload().has("block"));
+        assertEquals(1_000 + 25 * Ev.MIN, a.payload().get("ended_at").asLong());
+        assertEquals("break", a.payload().get("next").asText());
+        assertEquals(11, a.payload().get("held_notifications").asInt());
+        assertNull(a.naturalKey());
+        assertEquals("launcher", ContractFilter.sensorOf("android.focus", a.payload()));
+        assertTrue(ContractFilter.fieldsOf("android.focus").contains("blocked_opens"));
+
+        ObjectNode scheduled = Ev.focus(1, "scheduled", 2);
+        scheduled.put("block", "b".repeat(80));
+        assertEquals(60, accepted(scheduled).payload().get("block").asText().length());
+        assertEquals("rest", accepted(Ev.focus(1, "rest", 2)).payload().get("kind").asText());
+
+        assertEquals("invalid_enum", rejected(Ev.focus(1, "deep", 2)));
+        ObjectNode badNext = Ev.focus(1, "manual", 2);
+        badNext.put("next", "later");
+        assertEquals("invalid_enum", rejected(badNext));
+        ObjectNode noKind = Ev.focus(1, "manual", 2);
+        noKind.remove("kind");
+        assertEquals("missing_field", rejected(noKind));
+        ObjectNode noTime = Ev.focus(1, "manual", 2);
+        noTime.remove("at");
+        assertEquals("missing_time", rejected(noTime));
+    }
 }

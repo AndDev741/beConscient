@@ -20,6 +20,7 @@ object Events {
     const val NOTIFICATION_REMOVED = "android.notification_removed"
     const val SHORTS = "android.shorts"
     const val PAUSE = "android.pause"
+    const val FOCUS = "android.focus"
     const val HEALTH = "health"
 
     /** Usage kinds the contract accepts. */
@@ -37,7 +38,14 @@ object Events {
 
     enum class ShortsState(val wire: String) { ENTER("enter"), EXIT("exit"), UNCLASSIFIED("unclassified") }
 
-    enum class PauseOutcome(val wire: String) { OPENED("opened"), BACKED_OUT("backed_out"), ALTERNATIVE("alternative") }
+    enum class PauseOutcome(val wire: String) { OPENED("opened"), BACKED_OUT("backed_out"), ALTERNATIVE("alternative"), REST("rest") }
+
+    /** What the owner said they open the app for. */
+    enum class PauseIntent(val wire: String) { REPLY("reply"), SPECIFIC("specific"), HABIT("habit") }
+
+    enum class FocusKind(val wire: String) { MANUAL("manual"), SCHEDULED("scheduled"), REST("rest") }
+
+    enum class FocusNext(val wire: String) { BREAK("break"), STOP("stop"), NONE("none") }
 
     enum class SensorState(val wire: String) { OK("ok"), STOPPED("stopped"), DISABLED("disabled"), UNKNOWN("unknown") }
 
@@ -148,16 +156,49 @@ object Events {
         block: String?,
         alternative: String?,
         waitMs: Long,
+        intent: PauseIntent? = null,
+        requiredWaitMs: Long? = null,
+        openCount: Int? = null,
     ): EventRow {
         val id = Uuid7.generate(now)
         val payload = point(id, PAUSE, at) {
             put("package", packageName.take(255))
             put("outcome", outcome.wire)
+            if (intent != null && outcome == PauseOutcome.OPENED) put("intent", intent.wire)
             if (!block.isNullOrEmpty()) put("block", block.take(60))
             if (!alternative.isNullOrEmpty()) put("alternative", alternative.take(255))
             put("wait_ms", waitMs.coerceAtLeast(0))
+            if (requiredWaitMs != null) put("required_wait_ms", requiredWaitMs.coerceAtLeast(0))
+            if (openCount != null && openCount > 0) put("open_count", openCount)
         }
         return EventRow(id = id, type = PAUSE, time = at, payload = payload, queuedAt = now)
+    }
+
+    /** One focus period, once it is over. Neither the allowed nor the blocked apps leave the phone. */
+    fun focus(
+        now: Long,
+        startedAt: Long,
+        endedAt: Long,
+        kind: FocusKind,
+        plannedMs: Long,
+        next: FocusNext,
+        cycle: Int,
+        blockedOpens: Int,
+        heldNotifications: Int,
+        block: String?,
+    ): EventRow {
+        val id = Uuid7.generate(now)
+        val payload = point(id, FOCUS, startedAt) {
+            put("kind", kind.wire)
+            put("planned_ms", plannedMs.coerceAtLeast(0))
+            put("ended_at", endedAt.coerceAtLeast(startedAt))
+            put("next", next.wire)
+            put("cycle", cycle.coerceAtLeast(1))
+            put("blocked_opens", blockedOpens.coerceAtLeast(0))
+            put("held_notifications", heldNotifications.coerceAtLeast(0))
+            if (kind == FocusKind.SCHEDULED && !block.isNullOrEmpty()) put("block", block.take(60))
+        }
+        return EventRow(id = id, type = FOCUS, time = startedAt, payload = payload, queuedAt = now)
     }
 
     fun health(

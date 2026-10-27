@@ -64,10 +64,33 @@ public final class Dto {
     public record DayLabel(String id, String categoryId, long from, long to, long minutes) {
     }
 
+    public record FocusKinds(long manual, long scheduled, long rest) {
+    }
+
+    /** Focus periods that started on the day, rests included; {@code minutes} runs from start to end of each. */
+    public record FocusPeriods(long periods, FocusKinds byKind, long minutes, long blockedOpens, long heldNotifications) {
+    }
+
+    public record PauseOutcomes(long opened, long backedOut, long alternative, long rest) {
+    }
+
+    public record PauseIntents(long reply, long specific, long habit) {
+    }
+
+    public record Pauses(long shown, PauseOutcomes byOutcome, PauseIntents byIntent) {
+    }
+
+    public record FocusPoint(String date, long focusPeriods, long focusMinutes) {
+    }
+
+    /** The launcher on the day; {@code recent} is the seven days ending on it, oldest first. */
+    public record Launcher(FocusPeriods focus, Pauses pauses, List<FocusPoint> recent) {
+    }
+
     public record DayView(String date, String zone, String state, Derivation derivation, Headline headline,
                           Totals totals, List<CategoryMinutes> byCategory, List<Hour> hours,
                           List<SubjectMinutes> topSubjects, Unlocks unlocks, List<NotificationCount> notifications,
-                          List<DayLabel> computerLabels) {
+                          List<DayLabel> computerLabels, Launcher launcher) {
     }
 
     // ------------------------------------------------------------- trends

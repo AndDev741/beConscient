@@ -21,6 +21,23 @@ class LauncherSettingsTest {
     private val bed = Block("b", "Before bed", DayOfWeek.entries.toSet(), LocalTime.of(21, 0), LocalTime.of(1, 0), "Kindle", "com.amazon.kindle")
 
     @Test
+    fun `a block knows when the occurrence in force ends`() {
+        assertEquals(at(12, "20:00"), family.endAfter(at(12, "19:15")))
+        assertEquals("before midnight it ends the next day", at(17, "01:00"), bed.endAfter(at(16, "23:30")))
+        assertEquals("after midnight it ends the same day", at(17, "01:00"), bed.endAfter(at(17, "00:30")))
+    }
+
+    @Test
+    fun `locking blocks and the focus list survive encoding`() {
+        val s = LauncherSettings(blocks = listOf(family, bed.copy(locks = true)), focusAllowed = setOf("com.amazon.kindle"))
+        val back = LauncherSettings.decode(s.encode())
+        assertEquals(s, back)
+        assertEquals("b", back.lockingBlockAt(at(16, "23:30"))?.id)
+        assertNull(back.lockingBlockAt(at(12, "19:30")))
+        assertNull("an untouched list stays unset, so the defaults apply", LauncherSettings.decode(LauncherSettings().encode()).focusAllowed)
+    }
+
+    @Test
     fun `a block covers its start and stops at its end`() {
         assertTrue(family.inForceAt(at(12, "19:00")))
         assertTrue(family.inForceAt(at(12, "19:59")))

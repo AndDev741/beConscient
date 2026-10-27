@@ -37,6 +37,12 @@ class LauncherStore(private val prefs: SharedPreferences) {
 
     fun deleteBlock(id: String) = update { s -> s.copy(blocks = s.blocks.filterNot { it.id == id }) }
 
+    /** Adds [pkg] to the apps allowed during focus, or removes it. [defaults] is the list in use until the first edit. */
+    fun toggleFocusAllowed(pkg: String, defaults: Set<String>) = update {
+        val current = it.focusAllowed ?: defaults
+        it.copy(focusAllowed = if (pkg in current) current - pkg else current + pkg)
+    }
+
     companion object {
         private const val FILE = "launcher"
         private const val KEY = "settings"

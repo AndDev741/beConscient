@@ -68,6 +68,9 @@ public class DayService {
     @Inject
     ComputerLabelService labels;
 
+    @Inject
+    LauncherService launcher;
+
     /** A stored segment as read. */
     public record Seg(long id, UUID deviceId, long start, long end, String kind, String subject) {
         Span span() {
@@ -394,7 +397,7 @@ public class DayService {
                 derivationDto(), headline.dto(),
                 new Dto.Totals(Minutes.of(unionDay), overlapMinutes, byDevice),
                 byCategory, hours, topSubjects(ctx, pieces, b), unlocks(b), notifications(b),
-                computerLabels(ctx, pieces, b));
+                computerLabels(ctx, pieces, b), launcher.day(ctx, date));
     }
 
     /** The marked stretches touching the day, with the computer time each took on it. */

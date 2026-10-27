@@ -16,5 +16,9 @@
   { "case": "pause message and typed text are dropped", "expect": "accepted_without", "fields": ["message", "reason_text"],
     "event": { "id": "0192f3a1-0000-7000-8000-000000000108", "type": "android.pause", "at": 1760089500000, "package": "com.whatsapp", "outcome": "opened", "wait_ms": 5100, "message": "Family time", "reason_text": "replying" } },
   { "case": "pause outcome outside the list is rejected", "expect": "rejected", "reason": "invalid_enum",
-    "event": { "id": "0192f3a1-0000-7000-8000-000000000109", "type": "android.pause", "at": 1760089500000, "package": "com.whatsapp", "outcome": "snoozed", "wait_ms": 5100 } }
+    "event": { "id": "0192f3a1-0000-7000-8000-000000000109", "type": "android.pause", "at": 1760089500000, "package": "com.whatsapp", "outcome": "snoozed", "wait_ms": 5100 } },
+  { "case": "pause intent outside the list is rejected", "expect": "rejected", "reason": "invalid_enum",
+    "event": { "id": "0192f3a1-0000-7000-8000-00000000010a", "type": "android.pause", "at": 1760089500000, "package": "com.whatsapp", "outcome": "opened", "intent": "boredom", "wait_ms": 5100 } },
+  { "case": "focus kind outside the list is rejected", "expect": "rejected", "reason": "invalid_enum",
+    "event": { "id": "0192f3a1-0000-7000-8000-00000000010b", "type": "android.focus", "at": 1760090000000, "kind": "pomodoro", "planned_ms": 1800000, "ended_at": 1760091800000, "next": "stop", "cycle": 1, "blocked_opens": 0, "held_notifications": 0 } }
 ]

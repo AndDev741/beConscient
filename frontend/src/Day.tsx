@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
-import { api, type DayView } from './api';
-import { BarList, HourlyChart } from './charts';
+import { api, type DayView, type Launcher } from './api';
+import { BarList, DayCounts, HourlyChart } from './charts';
 import {
   count, dateLong, duration, durationParts, isTime, safeColor, shiftDays, timeOfDay, timeToMinutes, todayIso,
 } from './format';
@@ -96,6 +96,8 @@ function DayBody({ d, onTrace, onChanged }: { d: DayView; onTrace?: (segmentId: 
       )}
 
       <Headline d={d} />
+
+      {d.launcher && launcherInUse(d.launcher) && <LauncherSection l={d.launcher} />}
 
       {empty ? (
         <>
@@ -342,6 +344,117 @@ function ComputerTime({ d, onChanged }: { d: DayView; onChanged: () => void }) {
         {error && <p className="err" role="alert">{error}</p>}
       </form>
     </Card>
+  );
+}
+
+/** Days from before the owner used the launcher have nothing to say, so the section stays out. */
+const launcherInUse = (l: Launcher) =>
+  l.focus.periods > 0 || l.pauses.shown > 0 || l.recent.some((p) => p.focusPeriods > 0);
+
+/**
+ * What the launcher on the phone did that day: focus periods, with the last
+ * seven days since the count is what the owner follows, and pause screens.
+ * Counted from the phone's events; none of it changes screen time.
+ */
+function LauncherSection({ l }: { l: Launcher }) {
+  const f = l.focus;
+  const p = l.pauses;
+  const kinds = [
+    f.byKind.manual > 0 && `${count(f.byKind.manual)} started by you`,
+    f.byKind.scheduled > 0 && `${count(f.byKind.scheduled)} from a block`,
+    f.byKind.rest > 0 && `${count(f.byKind.rest)} ${f.byKind.rest === 1 ? 'rest' : 'rests'}`,
+  ].filter(Boolean).join(' · ');
+  const answered = p.byIntent.reply + p.byIntent.specific + p.byIntent.habit;
+  const unanswered = Math.max(0, p.byOutcome.opened - answered);
+
+  return (
+    <div className="grid2">
+      <Card title="Focus" hint="From the launcher">
+        <div className="compare">
+          <div className="cfig">
+            <div className="flabel">Focus periods</div>
+            <div className="fval num" data-testid="focus-periods">{count(f.periods)}</div>
+            <div className="fmeta">{kinds || 'None on this day'}</div>
+          </div>
+          <div className="cfig">
+            <div className="flabel">Focus time</div>
+            <div className="fval num" data-testid="focus-time">
+              {durationParts(f.minutes).map((x) => (
+                <span key={x.unit}>{x.value}<small>{x.unit}</small></span>
+              ))}
+            </div>
+          </div>
+        </div>
+        <ul className="rows compact">
+          <li>
+            <span className="grow">Apps sent back to the home screen</span>
+            <span className="num">{count(f.blockedOpens)}</span>
+          </li>
+          <li>
+            <span className="grow">Notifications held until the end</span>
+            <span className="num">{count(f.heldNotifications)}</span>
+          </li>
+        </ul>
+        <h3 className="group">Focus periods, last {l.recent.length} days</h3>
+        <DayCounts
+          label="Focus periods"
+          points={l.recent.map((r) => ({ date: r.date, count: r.focusPeriods }))}
+          detail={(i) => [{ name: 'Focus time', value: duration(l.recent[i].focusMinutes) }]}
+        />
+      </Card>
+
+      <Card title="Pause screen" hint={<span className="num">{count(p.shown)} shown</span>}>
+        {p.shown === 0 ? (
+          <p className="help">No pause screen on this day.</p>
+        ) : (
+          <>
+            <ul className="rows compact">
+              <li>
+                <span className="grow">Opened the app</span>
+                <span className="num">{count(p.byOutcome.opened)}</span>
+              </li>
+              <li>
+                <span className="grow">Backed out</span>
+                <span className="num">{count(p.byOutcome.backedOut)}</span>
+              </li>
+              <li>
+                <span className="grow">Opened the alternative</span>
+                <span className="num">{count(p.byOutcome.alternative)}</span>
+              </li>
+              <li>
+                <span className="grow">Rested instead</span>
+                <span className="num">{count(p.byOutcome.rest)}</span>
+              </li>
+            </ul>
+            {p.byOutcome.opened > 0 && (
+              <>
+                <h3 className="group">Why the app was opened</h3>
+                <ul className="rows compact">
+                  <li>
+                    <span className="grow">To reply to someone</span>
+                    <span className="num">{count(p.byIntent.reply)}</span>
+                  </li>
+                  <li>
+                    <span className="grow">Something specific to do</span>
+                    <span className="num">{count(p.byIntent.specific)}</span>
+                  </li>
+                  <li>
+                    <span className="grow">Out of habit</span>
+                    <span className="num">{count(p.byIntent.habit)}</span>
+                  </li>
+                  {unanswered > 0 && (
+                    <li className="muted">
+                      <span className="grow">No reason given</span>
+                      <span className="num">{count(unanswered)}</span>
+                    </li>
+                  )}
+                </ul>
+              </>
+            )}
+          </>
+        )}
+      </Card>
+    </div>
   );
 }
 
