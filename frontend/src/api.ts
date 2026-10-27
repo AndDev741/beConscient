@@ -91,6 +91,36 @@ export interface ComputerLabel {
   minutes: number;
 }
 
+/** Focus periods of the launcher that started on the day, rests included. */
+export interface FocusPeriods {
+  periods: number;
+  byKind: { manual: number; scheduled: number; rest: number };
+  /** From start to end of each period, even past midnight. */
+  minutes: number;
+  blockedOpens: number;
+  heldNotifications: number;
+}
+
+/** Pause screens of the launcher. `byIntent` counts only the openings that gave a reason. */
+export interface Pauses {
+  shown: number;
+  byOutcome: { opened: number; backedOut: number; alternative: number; rest: number };
+  byIntent: { reply: number; specific: number; habit: number };
+}
+
+export interface FocusPoint {
+  date: string;
+  focusPeriods: number;
+  focusMinutes: number;
+}
+
+export interface Launcher {
+  focus: FocusPeriods;
+  pauses: Pauses;
+  /** The seven days ending on the shown one, oldest first. */
+  recent: FocusPoint[];
+}
+
 export interface Derivation {
   rebuilding: boolean;
   /** 0 to 1. */
@@ -111,6 +141,8 @@ export interface DayView {
   notifications: NotificationCount[];
   /** Absent from a backend older than marked computer time. */
   computerLabels?: ComputerLabel[];
+  /** Absent from a backend older than focus periods. */
+  launcher?: Launcher;
 }
 
 // ---------------------------------------------------------------- trends

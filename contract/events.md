@@ -98,12 +98,32 @@ One pause screen of the launcher, shown when the owner opens an app they chose t
 | Field | Type | Notes |
 |---|---|---|
 | `package` | string | Max 255. The app being opened. |
-| `outcome` | enum | `opened` (opened the app after the wait), `backed_out` (left without opening anything), `alternative` (opened the block's alternative app instead) |
+| `outcome` | enum | `opened` (opened the app after the wait), `backed_out` (left without opening anything), `alternative` (opened the block's alternative app instead), `rest` (started a short rest instead) |
+| `intent` | enum | Optional, only with `opened`: `reply` (to answer someone), `specific` (something specific to do), `habit` (no reason, out of habit). |
 | `block` | string | Optional. Name of the block in force, as the owner typed it on the phone, max 60. Absent outside any block. |
 | `alternative` | string | Optional. Package of the alternative app the pause screen offered, max 255. |
 | `wait_ms` | integer | Time from the pause screen appearing to the owner's choice. |
+| `required_wait_ms` | integer | Optional. The wait this pause imposed before the app could open. It grows with each pause of the same app on the same local day. |
+| `open_count` | integer | Optional. Which pause of this app this is on the local day, starting at 1. |
 
 Never sent: the block's message, apps the owner did not choose to control.
+
+### `android.focus` (point)
+
+One focus period of the launcher: a stretch where only the owner's allowed apps open and notifications from other apps wait until the end. `at` is when the period started. The phone sends it once the period is over: for `manual`, when the owner chooses what comes next; otherwise when it ends.
+
+| Field | Type | Notes |
+|---|---|---|
+| `kind` | enum | `manual` (started by the owner), `scheduled` (a locking block), `rest` (a short rest started from the pause screen) |
+| `planned_ms` | integer | Planned length of the period. |
+| `ended_at` | integer | Epoch milliseconds when the period ended. |
+| `next` | enum | `break` (the owner took a 5-minute break and another period followed), `stop` (the owner ended the session), `none` (`scheduled` and `rest` end on their own) |
+| `cycle` | integer | 1 for the first period of a manual session, 2 after the first break, and so on. 1 for the other kinds. |
+| `blocked_opens` | integer | Times an app outside the allowed list came to the front and was sent back to the home screen. |
+| `held_notifications` | integer | Notifications from apps outside the allowed list held until the end of the period. |
+| `block` | string | Optional, `scheduled` only. Name of the block, max 60. |
+
+Never sent: the allowed apps, which apps were blocked, notification contents.
 
 ### `desktop.activity` (interval)
 

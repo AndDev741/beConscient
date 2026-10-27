@@ -6,7 +6,7 @@
  */
 import { useEffect, useState, type KeyboardEvent } from 'react';
 import type { CategoryTotal, Hour, SeriesPoint } from './api';
-import { dateLong, duration, parseIso, percent, safeColor, weekdayShort } from './format';
+import { count, dateLong, duration, parseIso, percent, safeColor, weekdayShort } from './format';
 import { useWidth } from './hooks';
 import { Swatch } from './ui';
 
@@ -316,6 +316,101 @@ export function TrendChart({ series, metric, label }: {
         <li><span className="dot solid" aria-hidden="true" /> Counted in the comparison</li>
         <li><span className="dot dashed" aria-hidden="true" /> Left out (not closed, partial or incomplete)</li>
       </ul>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------- daily counts
+
+const COUNT_H = 56;
+const VALUE_H = 16;
+
+/**
+ * One column per day with its count written above it, for short series such as
+ * focus periods per day. The numbers are always visible; tapping a day adds its
+ * date and any extra rows the caller gives.
+ */
+export function DayCounts({ points, label, detail }: {
+  points: { date: string; count: number }[];
+  /** What is counted, e.g. "Focus periods". */
+  label: string;
+  /** Extra rows for the tapped day. */
+  detail?: (index: number) => { name: string; value: string }[];
+}) {
+  const [selected, setSelected] = useState<number | null>(null);
+  const { ref, width } = useWidth<HTMLDivElement>(640);
+  const n = Math.max(1, points.length);
+  const colW = Math.min(64, Math.max(30, Math.floor(width / n)));
+  const svgW = colW * n;
+  const base = VALUE_H + COUNT_H;
+  const svgH = base + LABEL_H;
+  const max = Math.max(1, ...points.map((p) => p.count));
+  const pad = Math.max(4, Math.round(colW * 0.22));
+  const sel = selected !== null && selected < points.length ? selected : null;
+
+  const tick = (iso: string) => (points.length <= 7 ? weekdayShort(iso) : String(parseIso(iso).getDate()));
+
+  return (
+    <div className="trend">
+      <div className="hscroll" ref={ref}>
+        <svg
+          className="hsvg"
+          width={svgW}
+          height={svgH}
+          viewBox={`0 0 ${svgW} ${svgH}`}
+          role="group"
+          aria-label={`${label} per day. Select a day to see it.`}
+        >
+          <line className="axis" x1={0} x2={svgW} y1={base} y2={base} />
+          {points.map((p, i) => {
+            const h = (p.count / max) * COUNT_H;
+            const toggle = () => setSelected(sel === i ? null : i);
+            return (
+              <g
+                key={p.date}
+                className={sel === i ? 'hcol sel' : 'hcol'}
+                transform={`translate(${i * colW},0)`}
+                role="button"
+                tabIndex={0}
+                aria-pressed={sel === i}
+                aria-label={`${p.date}, ${label.toLowerCase()}: ${count(p.count)}`}
+                onClick={toggle}
+                onKeyDown={toggleKeys(toggle)}
+              >
+                <rect className="hit" x={0} y={0} width={colW} height={base} />
+                {p.count > 0 && <rect className="tbar" x={pad} y={base - h} width={colW - 2 * pad} height={h} rx={2} />}
+                <text className="cval" x={colW / 2} y={base - h - 4} textAnchor="middle">
+                  {count(p.count)}
+                </text>
+                <text className="tick" x={colW / 2} y={svgH - 5} textAnchor="middle">
+                  {tick(p.date)}
+                </text>
+              </g>
+            );
+          })}
+        </svg>
+      </div>
+      {sel === null ? (
+        <p className="help">Tap a bar to see that day.</p>
+      ) : (
+        <div className="hdetail" aria-live="polite">
+          <div className="hdhead">
+            <b>{dateLong(points[sel].date)}</b>
+          </div>
+          <ul className="rows">
+            <li>
+              <span className="grow">{label}</span>
+              <span className="num">{count(points[sel].count)}</span>
+            </li>
+            {detail?.(sel).map((r) => (
+              <li key={r.name}>
+                <span className="grow">{r.name}</span>
+                <span className="num">{r.value}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }

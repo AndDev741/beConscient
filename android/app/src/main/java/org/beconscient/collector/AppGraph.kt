@@ -9,7 +9,9 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import org.beconscient.collector.events.TzMarkers
 import org.beconscient.collector.health.HealthReporter
+import org.beconscient.collector.focus.FocusController
 import org.beconscient.collector.launcher.LauncherStore
+import org.beconscient.collector.launcher.PauseCounts
 import org.beconscient.collector.notifications.NotificationCollector
 import org.beconscient.collector.pairing.CredentialStore
 import org.beconscient.collector.pairing.PairingClient
@@ -43,6 +45,7 @@ class AppGraph(
 
     val notificationQueue = SerialQueue(scope, "notifications")
     val shortsQueue = SerialQueue(scope, "shorts")
+    val focusQueue = SerialQueue(scope, "focus")
 
     val tzMarkers = TzMarkers(db.dao(), clock)
     val usageReader = UsageReader(db.dao(), AndroidUsageSource(app), clock)
@@ -52,6 +55,8 @@ class AppGraph(
     val health = HealthReporter(db.dao(), probe, clock, clientVersion)
     val pairing = PairingClient(config, transport, credentials, db.dao(), tzMarkers, clock, clientVersion)
     val launcher = LauncherStore.android(app)
+    val pauseCounts = PauseCounts.android(app)
+    val focus = FocusController.android(app, launcher, db.dao(), clock, focusQueue)
 
     /** Runs [block] off the main thread while keeping a receiver's broadcast alive. */
     fun runAsync(receiver: BroadcastReceiver, block: suspend () -> Unit) {

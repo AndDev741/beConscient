@@ -118,6 +118,25 @@ public final class Ev {
         return n;
     }
 
+    public static ObjectNode pause(long at, String pkg, String outcome, String intent) {
+        ObjectNode n = pause(at, pkg, outcome);
+        n.put("intent", intent);
+        return n;
+    }
+
+    /** A focus period from {@code at} to {@code endedAt}, sent once it is over. */
+    public static ObjectNode focus(long at, String kind, long endedAt) {
+        ObjectNode n = point("android.focus", at);
+        n.put("kind", kind);
+        n.put("planned_ms", endedAt - at);
+        n.put("ended_at", endedAt);
+        n.put("next", "manual".equals(kind) ? "stop" : "none");
+        n.put("cycle", 1);
+        n.put("blocked_opens", 0);
+        n.put("held_notifications", 0);
+        return n;
+    }
+
     public static ObjectNode posted(long at, String pkg, String ref) {
         ObjectNode n = point("android.notification_posted", at);
         n.put("package", pkg);

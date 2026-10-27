@@ -70,16 +70,21 @@ Raw events are the source of truth. Screen-time segments are a projection that c
 - An **unlock** is each entry into screen-on-and-unlocked, with or without `KEYGUARD_HIDDEN`. Its first app is the first `ACTIVITY_RESUMED` of a non-launcher package within 60 seconds; otherwise it has none.
 - **Shorts**: the accessibility markers are intersected with YouTube segments. Time inside `enter`..`exit` becomes subject `app:com.google.android.youtube#shorts`. An open `enter` closes when YouTube leaves the foreground or the screen turns off. Without markers, time stays as YouTube.
 - **Notifications**: counted at read time. Updates, group summaries and ongoing notifications are excluded from "posted". A removal with reason `click` counts as tapped; `cancel` and `cancel_all` count as dismissed.
-- **Pauses**: stored as raw events only; they change no segment. When the collector is the home app, its own screens (home, app list, pause screen) are launcher time and go to `Unattributed`, like any launcher.
+- **Pauses and focus periods**: stored as raw events only; they change no segment. When the collector is the home app, its own screens (home, app list, pause screen) are launcher time and go to `Unattributed`, like any launcher.
 
 ### Launcher
 
 The collector can be set as the phone's home app. The home screen is text only: a clock, the block in force and a few pinned apps, with every app one swipe away.
 
 - The owner marks apps as **controlled** and defines **blocks** on the phone: a name, days, a start and an end, a message and an optional alternative app. A block whose end is at or before its start runs past midnight and belongs to the day it started.
-- Opening a controlled app from the launcher shows the **pause screen**: the message of the block in force, or "Is this important?" outside any block, and a 5-second countdown before the app can be opened. Going back and opening the alternative work from the first second.
-- Each pause sends one `android.pause` event with the app, the block name, the outcome and the wait. The message stays on the phone.
+- Opening a controlled app from the launcher shows the **pause screen**: the message of the block in force, or "Is this important?" outside any block, how many times the app was opened from the launcher today and when, and a countdown before the app can be opened. The wait is 5 seconds for the first pause of an app on a local day and doubles with each one after it, up to 60 seconds. Opening then asks what for: to reply to someone, for something specific, or out of habit. Going back, resting 3 minutes and opening the alternative work from the first second.
+- Each pause sends one `android.pause` event with the app, the block name, the outcome, the intent and the waits. The message stays on the phone.
 - Apps opened from notifications, recents or links skip the launcher and get no pause.
+- A **focus period** locks the phone to the owner's **allowed apps** (by default the phone, messages, contacts, maps, camera, clock, Kindle and ride apps; the collector, the keyboard and System UI always work). The owner starts one from the home screen for 15 to 90 minutes, a block marked as locking starts one for as long as it lasts, and "Rest 3 min" on the pause screen starts a 3-minute one.
+- During a period the accessibility service watches which app comes to the front. Any app outside the list goes straight back to the home screen, which says what is blocked and until when. Settings is blocked too, so the period cannot be undone halfway. An app with a call notification (category `call`) stays usable while that notification is up.
+- During a period the notification listener snoozes notifications from apps outside the list until the period ends, so they arrive together afterwards.
+- When a manual period ends the phone stays locked until the owner chooses: 5 minutes of free use followed by another period of the same length, or stop. Scheduled periods and rests end on their own.
+- Each period sends one `android.focus` event. The home screen shows today's periods, minutes and rests.
 
 ### Desktop rules
 

@@ -47,9 +47,11 @@ import java.util.UUID
 fun LauncherSettingsScreen(
     settings: LauncherSettings,
     apps: List<LaunchableApp>,
+    focusAllowed: Set<String>,
     onBack: () -> Unit,
     onEditBlock: (String?) -> Unit,
     onToggleControlled: (String) -> Unit,
+    onToggleFocusAllowed: (String) -> Unit,
     onHomeSettings: () -> Unit,
     onCollectorStatus: () -> Unit,
 ) {
@@ -76,7 +78,7 @@ fun LauncherSettingsScreen(
                     .padding(vertical = 10.dp),
             ) {
                 Text(b.name, fontSize = 20.sp)
-                Text("${daysLabel(b.days)} · ${b.range()}", color = dim)
+                Text("${daysLabel(b.days)} · ${b.range()}${if (b.locks) " · locks the phone" else ""}", color = dim)
                 if (b.message.isNotBlank()) Text(b.message, color = dim, maxLines = 2)
             }
         }
@@ -94,6 +96,20 @@ fun LauncherSettingsScreen(
             }
         }
         if (controlled.isEmpty()) item { Text("None yet.", color = dim) }
+        item {
+            Title("Allowed during focus")
+            Text("Only these open while the phone is locked. Long-press an app in the list to add it.", color = dim)
+            Spacer(Modifier.height(8.dp))
+        }
+        // Only installed apps: the defaults name apps for several phone makers
+        val allowed = apps.filter { it.packageName in focusAllowed }
+        items(allowed, key = { "allowed-" + it.packageName }) { app ->
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(app.label, fontSize = 18.sp, modifier = Modifier.weight(1f).padding(vertical = 12.dp))
+                TextButton(onClick = { onToggleFocusAllowed(app.packageName) }) { Text("remove", color = dim) }
+            }
+        }
+        if (allowed.isEmpty()) item { Text("None: a focus period blocks every app.", color = dim) }
         item {
             Title("Phone")
             TextButton(onClick = onHomeSettings) { Text("Choose the default home app") }
@@ -126,6 +142,7 @@ fun BlockEditor(
     var start by remember { mutableStateOf(block?.start ?: LocalTime.of(19, 0)) }
     var end by remember { mutableStateOf(block?.end ?: LocalTime.of(20, 0)) }
     var alternative by remember { mutableStateOf(block?.alternative) }
+    var locks by remember { mutableStateOf(block?.locks ?: false) }
     var picking by remember { mutableStateOf(false) }
     val valid = name.isNotBlank() && days.isNotEmpty() && start != end
 
@@ -184,6 +201,12 @@ fun BlockEditor(
             OutlinedButton(onClick = { picking = true }) { Text(altLabel ?: "None") }
             if (alternative != null) TextButton(onClick = { alternative = null }) { Text("remove", color = dim) }
         }
+        FilterChip(
+            selected = locks,
+            onClick = { locks = !locks },
+            label = { Text("Lock the phone during this block") },
+        )
+        if (locks) Text("Only the apps allowed during focus open, and other notifications wait until the block ends.", color = dim)
         Spacer(Modifier.height(8.dp))
         Button(
             enabled = valid,
@@ -197,6 +220,7 @@ fun BlockEditor(
                         end = end,
                         message = message.trim(),
                         alternative = alternative,
+                        locks = locks,
                     ),
                 )
             },

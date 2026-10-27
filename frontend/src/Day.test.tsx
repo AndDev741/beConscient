@@ -1,9 +1,9 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { DayView } from './api';
+import type { DayView, Launcher } from './api';
 import { Day } from './Day';
 import { CATEGORIES, makeDay } from './fixtures';
-import { duration } from './format';
+import { dateLong, duration } from './format';
 import { XSS_IMG, XSS_SVG, error, freezeNow, mockApi, pending, reply, type Handler } from './test/api';
 
 const DATE = '2026-10-08';
@@ -257,5 +257,97 @@ describe('Computer time marked by hand', () => {
     renderDay(makeDay(DATE, { empty: true }));
     await screen.findByText('No screen time recorded on this day.');
     expect(screen.queryByText('Computer time')).not.toBeInTheDocument();
+  });
+});
+
+describe('Focus and pauses from the launcher', () => {
+  const RECENT = [0, 1, 0, 2, 0, 3, 4];
+
+  function withLauncher(change: (l: Launcher) => void = () => {}): DayView {
+    const day = makeDay(DATE);
+    const l: Launcher = {
+      focus: { periods: 3, byKind: { manual: 2, scheduled: 1, rest: 1 }, minutes: 155, blockedOpens: 6, heldNotifications: 14 },
+      pauses: {
+        shown: 9,
+        byOutcome: { opened: 5, backedOut: 2, alternative: 1, rest: 1 },
+        byIntent: { reply: 2, specific: 1, habit: 1 },
+      },
+      recent: RECENT.map((n, i) => ({ date: `2026-10-0${i + 2}`, focusPeriods: n, focusMinutes: n * 40 })),
+    };
+    change(l);
+    day.launcher = l;
+    return day;
+  }
+
+  const card = async (title: string) => (await screen.findByRole('heading', { name: title })).closest('section') as HTMLElement;
+  const row = (scope: HTMLElement, name: string) => within(scope).getByText(name).closest('li') as HTMLElement;
+
+  it('shows how many focus periods the day had, by kind, and their time', async () => {
+    renderDay(withLauncher());
+    const focus = await card('Focus');
+    expect(within(focus).getByTestId('focus-periods')).toHaveTextContent('3');
+    expect(within(focus).getByText('2 started by you · 1 from a block · 1 rest')).toBeInTheDocument();
+    expect(within(focus).getByTestId('focus-time')).toHaveTextContent(/2\s*h\s*35\s*min/);
+    expect(row(focus, 'Apps sent back to the home screen')).toHaveTextContent('6');
+    expect(row(focus, 'Notifications held until the end')).toHaveTextContent('14');
+  });
+
+  it('draws the focus periods of the last seven days with each count written out', async () => {
+    renderDay(withLauncher());
+    const focus = await card('Focus');
+    expect(within(focus).getByText('Focus periods, last 7 days')).toBeInTheDocument();
+    const days = within(focus).getAllByRole('button', { name: /^2026-10-0\d, focus periods: \d$/ });
+    expect(days).toHaveLength(7);
+    expect(days.map((d) => d.textContent?.replace(/[A-Za-z]/g, ''))).toEqual(RECENT.map(String));
+
+    fireEvent.click(within(focus).getByRole('button', { name: '2026-10-08, focus periods: 4' }));
+    const detail = focus.querySelector('.hdetail') as HTMLElement;
+    expect(within(detail).getByText(dateLong('2026-10-08'))).toBeInTheDocument();
+    expect(row(detail, 'Focus time')).toHaveTextContent('2 h 40 min');
+  });
+
+  it('shows the pause screens by outcome and why the app was opened', async () => {
+    renderDay(withLauncher((l) => {
+      l.pauses.byIntent.habit = 0;
+    }));
+    const pauses = await card('Pause screen');
+    expect(within(pauses).getByText('9 shown')).toBeInTheDocument();
+    expect(row(pauses, 'Opened the app')).toHaveTextContent('5');
+    expect(row(pauses, 'Backed out')).toHaveTextContent('2');
+    expect(row(pauses, 'Opened the alternative')).toHaveTextContent('1');
+    expect(row(pauses, 'Rested instead')).toHaveTextContent('1');
+    expect(row(pauses, 'To reply to someone')).toHaveTextContent('2');
+    expect(row(pauses, 'Something specific to do')).toHaveTextContent('1');
+    expect(row(pauses, 'Out of habit')).toHaveTextContent('0');
+    expect(row(pauses, 'No reason given')).toHaveTextContent('2');
+  });
+
+  it('says so when the day had no pause screen and no focus period', async () => {
+    renderDay(withLauncher((l) => {
+      l.focus = { periods: 0, byKind: { manual: 0, scheduled: 0, rest: 0 }, minutes: 0, blockedOpens: 0, heldNotifications: 0 };
+      l.pauses = { shown: 0, byOutcome: { opened: 0, backedOut: 0, alternative: 0, rest: 0 }, byIntent: { reply: 0, specific: 0, habit: 0 } };
+    }));
+    const focus = await card('Focus');
+    expect(within(focus).getByTestId('focus-periods')).toHaveTextContent('0');
+    expect(within(focus).getByText('None on this day')).toBeInTheDocument();
+    expect(within(await card('Pause screen')).getByText('No pause screen on this day.')).toBeInTheDocument();
+  });
+
+  it('stays out before the launcher was used, and with a backend that does not send it', async () => {
+    const unused = withLauncher((l) => {
+      l.focus.periods = 0;
+      l.pauses.shown = 0;
+      l.recent = l.recent.map((p) => ({ ...p, focusPeriods: 0, focusMinutes: 0 }));
+    });
+    const { unmount } = renderDay(unused);
+    await screen.findByTestId('headline');
+    expect(screen.queryByRole('heading', { name: 'Focus' })).not.toBeInTheDocument();
+    unmount();
+
+    const older = makeDay(DATE);
+    delete older.launcher;
+    renderDay(older);
+    await screen.findByTestId('headline');
+    expect(screen.queryByRole('heading', { name: 'Pause screen' })).not.toBeInTheDocument();
   });
 });

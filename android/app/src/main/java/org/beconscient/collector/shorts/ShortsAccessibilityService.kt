@@ -10,15 +10,24 @@ import android.os.Looper
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import androidx.core.content.ContextCompat
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import org.beconscient.collector.AppGraph
 import org.beconscient.collector.events.Events
+import org.beconscient.collector.focus.FocusMachine
+import org.beconscient.collector.focus.FocusPhase
 import org.beconscient.collector.queue.Kv
 
 /**
  * Watches only com.google.android.youtube (see res/xml/shorts_accessibility.xml)
  * and reads only view resource ids, never text. It feeds [ShortsDetector] and
- * writes `android.shorts` markers. Exported only to holders of
- * BIND_ACCESSIBILITY_SERVICE, that is, the system.
+ * writes `android.shorts` markers. During a focus period it also receives
+ * window changes from every app, reads only the package of the window in
+ * front and sends a blocked app back to the home screen. Exported only to
+ * holders of BIND_ACCESSIBILITY_SERVICE, that is, the system.
  */
 class ShortsAccessibilityService : AccessibilityService() {
 
@@ -33,27 +42,80 @@ class ShortsAccessibilityService : AccessibilityService() {
 
     private val scanRunnable = Runnable { scan() }
 
+    private var scope: CoroutineScope? = null
+    private var watchingAll = false
+    private var youtubeOnlyTypes = 0
+
+    /** Notices a locking block starting or a break ending while no window changes. */
+    private val focusTick = object : Runnable {
+        override fun run() {
+            graph.focus.refresh()
+            handler.postDelayed(this, FOCUS_TICK_MS)
+        }
+    }
+
     private val screenReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
-            if (intent.action == Intent.ACTION_SCREEN_OFF) {
-                cancelScan()
-                detector.leave(graph.clock.now())
+            when (intent.action) {
+                Intent.ACTION_SCREEN_OFF -> {
+                    cancelScan()
+                    detector.leave(graph.clock.now())
+                }
+                Intent.ACTION_USER_PRESENT -> graph.focus.refresh()
             }
         }
     }
 
     override fun onServiceConnected() {
         running = true
+        youtubeOnlyTypes = serviceInfo?.eventTypes ?: 0
         ContextCompat.registerReceiver(
             this,
             screenReceiver,
-            IntentFilter(Intent.ACTION_SCREEN_OFF),
+            IntentFilter(Intent.ACTION_SCREEN_OFF).apply { addAction(Intent.ACTION_USER_PRESENT) },
             ContextCompat.RECEIVER_NOT_EXPORTED,
         )
+        scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate).also { s ->
+            s.launch { graph.focus.phase.collect { applyFocus(it) } }
+        }
+        handler.post(focusTick)
+    }
+
+    /** Widens the service to every app while the phone is locked, and narrows it back to YouTube after. */
+    private fun applyFocus(phase: FocusPhase) {
+        val all = FocusMachine.locking(phase)
+        val info = serviceInfo
+        if (all != watchingAll && info != null) {
+            watchingAll = all
+            info.packageNames = if (all) null else arrayOf(ShortsRules.YOUTUBE_PACKAGE)
+            info.eventTypes = if (all) AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED else youtubeOnlyTypes
+            serviceInfo = info
+        }
+        if (all) frontPackage()?.let { if (graph.focus.blocks(it)) sendHome(it) }
+    }
+
+    private fun frontPackage(): String? = try {
+        rootInActiveWindow?.packageName?.toString()
+    } catch (e: RuntimeException) {
+        null
+    }
+
+    private fun sendHome(pkg: String) {
+        graph.focus.onBlocked(pkg)
+        performGlobalAction(GLOBAL_ACTION_HOME)
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        if (event?.packageName?.toString() != ShortsRules.YOUTUBE_PACKAGE) return
+        val pkg = event?.packageName?.toString()
+        if (watchingAll && event?.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED && graph.focus.blocks(pkg)) {
+            // A dialog or a keyboard of another app can report a change: block only the window in front
+            val front = frontPackage()
+            if (front == null || front == pkg) {
+                sendHome(pkg!!)
+                return
+            }
+        }
+        if (pkg != ShortsRules.YOUTUBE_PACKAGE) return
         val now = graph.clock.now()
         val wait = maxOf(DEBOUNCE_MS, lastScanAt + MIN_SCAN_INTERVAL_MS - now)
         // A scan that is already due soon is kept: a playing video sends events
@@ -143,6 +205,10 @@ class ShortsAccessibilityService : AccessibilityService() {
     private fun stop() {
         if (!running) return
         running = false
+        handler.removeCallbacks(focusTick)
+        scope?.cancel()
+        scope = null
+        watchingAll = false
         cancelScan()
         detector.leave(graph.clock.now())
         runCatching { unregisterReceiver(screenReceiver) }
@@ -153,6 +219,7 @@ class ShortsAccessibilityService : AccessibilityService() {
         private const val MIN_SCAN_INTERVAL_MS = 500L
         private const val PENDING_TICK_MS = 500L
         private const val IDLE_TICK_MS = 3_000L
+        private const val FOCUS_TICK_MS = 30_000L
 
         @Volatile
         var running: Boolean = false

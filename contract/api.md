@@ -48,7 +48,12 @@ Login and pairing share a global rate limiter with exponential backoff capped at
   "topSubjects": [ { "subjectKey": "app:com.whatsapp", "label": "com.whatsapp", "categoryId": "…", "minutes": 41 } ],
   "unlocks": { "count": 57, "firstApps": [ { "subjectKey": "app:com.whatsapp", "label": "com.whatsapp", "count": 19 } ] },
   "notifications": [ { "subjectKey": "app:com.whatsapp", "label": "com.whatsapp", "posted": 88, "tapped": 21, "dismissed": 30 } ],
-  "computerLabels": [ { "id": "…", "categoryId": "…", "from": 1760122800000, "to": 1760129100000, "minutes": 98 } ]
+  "computerLabels": [ { "id": "…", "categoryId": "…", "from": 1760122800000, "to": 1760129100000, "minutes": 98 } ],
+  "launcher": {
+    "focus": { "periods": 3, "byKind": { "manual": 2, "scheduled": 1, "rest": 1 }, "minutes": 155, "blockedOpens": 6, "heldNotifications": 14 },
+    "pauses": { "shown": 9, "byOutcome": { "opened": 5, "backedOut": 2, "alternative": 1, "rest": 1 }, "byIntent": { "reply": 2, "specific": 1, "habit": 1 } },
+    "recent": [ { "date": "2026-10-04", "focusPeriods": 2, "focusMinutes": 75 } ]
+  }
 }
 ```
 
@@ -60,6 +65,10 @@ Login and pairing share a global rate limiter with exponential backoff capped at
 - `totals.screenMinutes` is the union across devices. In `byCategory` and `hours`, overlapping time is attributed to the phone.
 - Built-in categories: `Work`, `Personal computer`, `Uncategorized` (an app or site without a mapping) and `Unattributed` (phone screen on and unlocked with no attributable app).
 - `computerLabels` lists the stretches marked by hand that touch the day (see Computer labels). `minutes` is the computer time each one took on this day.
+- `launcher` counts the phone's `android.focus` and `android.pause` events (`events.md`) at read time. They are never screen time. Each event belongs to the local day of its `at`, so a focus period that runs past midnight counts, minutes included, on the day it started. Suspect events and exclusions are left out.
+  - `focus.periods` counts the focus rounds (`manual` and `scheduled`), and `minutes` is their sum of `ended_at − at`, as the phone's home screen counts them. Rests appear only in `byKind`. `blockedOpens` and `heldNotifications` are sums over every period, rests included.
+  - `pauses.shown` is every pause screen and `byOutcome` splits it. `byIntent` counts the openings that gave a reason, so it can add up to less than `byOutcome.opened`.
+  - `recent` has the seven days ending on `date`, oldest first, with each day's `focus.periods` and `focus.minutes`.
 
 ## Trends
 

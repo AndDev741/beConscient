@@ -3,7 +3,7 @@
  * mock mode (npm run dev:mock) serves them, so both exercise the same shapes.
  */
 import type {
-  Backstage, Category, CategoryTotal, DayState, DayView, Device, Hour, Settings, Subject, Trends,
+  Backstage, Category, CategoryTotal, DayState, DayView, Device, Hour, Launcher, Settings, Subject, Trends,
   ValidationRow, Period, SeriesPoint, Corrections,
 } from './api';
 import { isoDate, isoWeekday, parseIso, shiftDays, shiftMonths } from './format';
@@ -182,6 +182,45 @@ export function makeDay(date: string, opts: DayOptions = {}): DayView {
           { subjectKey: 'app:com.instagram.android', label: 'com.instagram.android', posted: 12, tapped: 5, dismissed: 2 },
         ],
     computerLabels: [],
+    launcher: makeLauncher(date, quiet),
+  };
+}
+
+// ---------------------------------------------------------------- launcher
+
+/** Focus periods of a day by kind: a couple started by hand, a locking block on weekdays, and a rest or two. */
+function focusPlan(date: string): { manual: number; scheduled: number; rest: number } {
+  const seed = hash(`focus ${date}`);
+  const weekend = isoWeekday(date) >= 6;
+  return { manual: weekend ? seed % 2 : 1 + (seed % 3), scheduled: weekend ? 0 : 1, rest: (seed >> 4) % 3 };
+}
+
+const focusMinutes = (p: { manual: number; scheduled: number; rest: number }) => p.manual * 45 + p.scheduled * 60 + p.rest * 3;
+
+/** The launcher on a day and the six before it. A quiet day has nothing at all. */
+export function makeLauncher(date: string, quiet = false): Launcher {
+  const plan = (d: string) => (quiet ? { manual: 0, scheduled: 0, rest: 0 } : focusPlan(d));
+  const day = plan(date);
+  const periods = day.manual + day.scheduled + day.rest;
+  const n = (v: number) => (quiet ? 0 : v);
+  return {
+    focus: {
+      periods,
+      byKind: day,
+      minutes: focusMinutes(day),
+      blockedOpens: n(3 + periods),
+      heldNotifications: n(6 * periods),
+    },
+    pauses: {
+      shown: n(9) + day.rest,
+      byOutcome: { opened: n(5), backedOut: n(3), alternative: n(1), rest: day.rest },
+      byIntent: { reply: n(2), specific: n(1), habit: n(1) },
+    },
+    recent: Array.from({ length: 7 }, (_, i) => {
+      const d = shiftDays(date, i - 6);
+      const p = plan(d);
+      return { date: d, focusPeriods: p.manual + p.scheduled + p.rest, focusMinutes: focusMinutes(p) };
+    }),
   };
 }
 

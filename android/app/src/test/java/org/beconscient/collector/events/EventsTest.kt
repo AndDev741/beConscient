@@ -23,7 +23,8 @@ class EventsTest {
         Events.NOTIFICATION_POSTED to common + setOf("package", "ref", "is_update", "is_group_summary", "is_ongoing", "importance", "category"),
         Events.NOTIFICATION_REMOVED to common + setOf("package", "ref", "reason", "posted_at"),
         Events.SHORTS to common + setOf("state", "youtube_version", "youtube_version_code", "rules_version"),
-        Events.PAUSE to common + setOf("package", "outcome", "block", "alternative", "wait_ms"),
+        Events.PAUSE to common + setOf("package", "outcome", "intent", "block", "alternative", "wait_ms", "required_wait_ms", "open_count"),
+        Events.FOCUS to common + setOf("kind", "planned_ms", "ended_at", "next", "cycle", "blocked_opens", "held_notifications", "block"),
         Events.HEALTH to common + setOf("client_version", "sensors", "watermark", "queue_depth", "oldest_unsent_age_ms", "home_package"),
     )
 
@@ -35,6 +36,9 @@ class EventsTest {
         Events.notificationRemoved(now, now, "com.whatsapp", "5d3c2b1a-0000-4000-8000-000000000001", Events.RemovalReason.CLICK, now - 1),
         Events.shorts(now, now, Events.ShortsState.ENTER, "19.40.33", 1549000000, 1),
         Events.pause(now, now - 3200, "com.google.android.youtube", Events.PauseOutcome.ALTERNATIVE, "Before bed", "com.amazon.kindle", 3200),
+        Events.pause(now, now - 21400, "com.whatsapp", Events.PauseOutcome.OPENED, null, null, 21400, Events.PauseIntent.REPLY, 20_000, 3),
+        Events.focus(now, now - 1_800_000, now, Events.FocusKind.MANUAL, 1_800_000, Events.FocusNext.BREAK, 1, 2, 7, null),
+        Events.focus(now, now - 3_600_000, now, Events.FocusKind.SCHEDULED, 3_600_000, Events.FocusNext.NONE, 1, 0, 3, "Before bed"),
         Events.health(
             now, "0.1.0",
             mapOf("usage" to Events.Sensor(Events.SensorState.OK, lastEventAt = now)),
@@ -61,6 +65,21 @@ class EventsTest {
             val theirs = fixture.filter { it.str("type") == row.type }.flatMap { it.keys }.toSet()
             assertTrue("${row.type}: ${ours - theirs} not in fixture", (ours - theirs).isEmpty())
         }
+    }
+
+    @Test
+    fun `a pause carries an intent only when the app was opened`() {
+        val opened = parse(Events.pause(now, now, "p", Events.PauseOutcome.OPENED, null, null, 1, Events.PauseIntent.HABIT, 5_000, 1).payload)
+        assertEquals("habit", opened.str("intent"))
+        val back = parse(Events.pause(now, now, "p", Events.PauseOutcome.BACKED_OUT, null, null, 1, Events.PauseIntent.HABIT, 5_000, 1).payload)
+        assertFalse("intent" in back)
+    }
+
+    @Test
+    fun `a focus event names its block only when scheduled`() {
+        val manual = parse(Events.focus(now, now, now, Events.FocusKind.MANUAL, 1, Events.FocusNext.STOP, 1, 0, 0, "Bed").payload)
+        assertFalse("block" in manual)
+        assertEquals(now.toString(), manual["at"].toString())
     }
 
     @Test
