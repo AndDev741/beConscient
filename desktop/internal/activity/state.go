@@ -3,8 +3,8 @@
 // Machine is a pure state machine (no clocks, no D-Bus) that follows the
 // diagram in docs/design.md:
 //
-//	Active  --5 min without input, no video or call-->  Idle
-//	Active  --5 min without input, video or call----->  Passive
+//	Active  --5 min without input, no video playing-->  Idle
+//	Active  --5 min without input, video playing----->  Passive
 //	Passive --keyboard or mouse---------------------->  Active
 //	Passive --video ends, or 2 h without input------->  Idle
 //	Idle    --keyboard or mouse---------------------->  Active
@@ -122,7 +122,7 @@ type Machine struct {
 	lastInput time.Time // most recent keyboard or mouse input
 	floor     time.Time // no interval may start before this
 	locked    bool      // the session reports the screen as locked
-	inhibited bool      // a GNOME idle inhibitor is active
+	inhibited bool      // a GNOME idle inhibitor is held while a media player plays
 	playing   bool      // the extension reports a playing video
 	cur       *openInterval
 }
@@ -401,7 +401,8 @@ func (m *Machine) SetLocked(now time.Time, locked bool) []Interval {
 	return out
 }
 
-// SetInhibited handles a change of the GNOME idle inhibitor flag.
+// SetInhibited handles a change of the inhibitor flag: an idle inhibitor held
+// while a media player plays.
 func (m *Machine) SetInhibited(now time.Time, inhibited bool) []Interval {
 	if m.inhibited == inhibited {
 		return nil

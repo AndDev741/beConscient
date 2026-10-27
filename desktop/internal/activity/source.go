@@ -56,6 +56,9 @@ type Source interface {
 	LockedHint() (bool, error)
 	// IdleInhibited is org.gnome.SessionManager.IsInhibited(8).
 	IdleInhibited() (bool, error)
+	// MediaPlaying reports whether any MPRIS player's PlaybackStatus is
+	// Playing. Player names are never sent.
+	MediaPlaying() (bool, error)
 	// Signals delivers session and system events.
 	Signals() <-chan Signal
 }

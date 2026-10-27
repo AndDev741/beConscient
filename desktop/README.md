@@ -73,15 +73,16 @@ The state machine follows `docs/design.md`: Active, Passive, Idle, Locked, Suspe
 |---|---|
 | Idle time, every 5 s | `org.gnome.Mutter.IdleMonitor.GetIdletime` (session bus) |
 | Lock | `org.gnome.ScreenSaver` `GetActive` at start and `ActiveChanged`. If it is unavailable, logind `LockedHint` (polled and via `PropertiesChanged`) |
-| Video or call | `org.gnome.SessionManager.IsInhibited(8)`, re-read on `InhibitorAdded` and `InhibitorRemoved` and on every poll. Only the flag is read |
+| Idle inhibitor | `org.gnome.SessionManager.IsInhibited(8)`, re-read on `InhibitorAdded` and `InhibitorRemoved` and on every poll. Only the flag is read |
+| Media playing | every `org.mpris.MediaPlayer2.*` name on the session bus, `PlaybackStatus` read on every poll. Only whether one says `Playing` is kept |
 | Playing video | the extension's `playing` message, tracked per browser connection |
 | Suspend and shutdown | logind `PrepareForSleep` and `PrepareForShutdown` (system bus), with a `delay` inhibitor for `sleep:shutdown` |
 
 Rules as implemented:
 
 - Active counts while the last input is less than 5 minutes old. Interval reason `input`.
-- After 5 minutes without input, the input interval ends at the last input. With an idle inhibitor or a playing video the agent goes Passive and a new interval starts at that last input, reason `playing` when the extension reports a video and `inhibitor` otherwise. Without either it goes Idle, and the open interval is trimmed back to the last input as a new revision.
-- A Passive stretch ends when the video or call ends, or 2 hours after the last input (AE9: a 3-hour video counts 2 hours).
+- After 5 minutes without input, the input interval ends at the last input. With an idle inhibitor held while a media player plays, or a playing video from the extension, the agent goes Passive and a new interval starts at that last input, reason `playing` when the extension reports a video and `inhibitor` otherwise. Otherwise it goes Idle, and the open interval is trimmed back to the last input as a new revision. An idle inhibitor with nothing playing (a keep-awake tool, an agent left working overnight) goes Idle.
+- A Passive stretch ends when the video ends, the media player stops or the inhibitor goes away, or 2 hours after the last input (AE9: a 3-hour video counts 2 hours).
 - A change of reason closes the interval and starts a new one.
 - Idle has no way into Passive: a video that starts while idle counts only after input.
 - Locking closes the open interval at the lock time. Unlocking counts as input and starts a new interval.

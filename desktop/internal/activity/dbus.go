@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -28,6 +29,12 @@ const (
 	sessionMgrIface = "org.gnome.SessionManager"
 	// inhibitIdle is GSM_INHIBITOR_FLAG_IDLE.
 	inhibitIdle uint32 = 8
+
+	busDest          = "org.freedesktop.DBus"
+	busPath          = "/org/freedesktop/DBus"
+	mprisPrefix      = "org.mpris.MediaPlayer2."
+	mprisPath        = "/org/mpris/MediaPlayer2"
+	mprisPlayerIface = "org.mpris.MediaPlayer2.Player"
 
 	login1Dest         = "org.freedesktop.login1"
 	login1Path         = "/org/freedesktop/login1"
@@ -235,6 +242,28 @@ func (s *DBusSource) IdleInhibited() (bool, error) {
 	var v bool
 	err := s.call(s.session, sessionMgrDest, sessionMgrPath, sessionMgrIface+".IsInhibited", &v, inhibitIdle)
 	return v, err
+}
+
+// MediaPlaying implements Source. A player that does not answer counts as not
+// playing.
+func (s *DBusSource) MediaPlaying() (bool, error) {
+	var names []string
+	if err := s.call(s.session, busDest, busPath, busDest+".ListNames", &names); err != nil {
+		return false, err
+	}
+	for _, n := range names {
+		if !strings.HasPrefix(n, mprisPrefix) {
+			continue
+		}
+		var v dbus.Variant
+		if err := s.call(s.session, n, mprisPath, propsIface+".Get", &v, mprisPlayerIface, "PlaybackStatus"); err != nil {
+			continue
+		}
+		if st, _ := v.Value().(string); st == "Playing" {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 // LockedHint implements Source.

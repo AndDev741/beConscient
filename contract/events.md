@@ -111,9 +111,9 @@ Active screen time on the computer, as decided by the agent's state machine.
 
 | Field | Type | Notes |
 |---|---|---|
-| `reason` | enum | `input`, `inhibitor`, `playing`. A new interval starts when the reason changes. |
+| `reason` | enum | `input`, `inhibitor`, `playing`. `inhibitor` is time without input while a GNOME idle inhibitor is held and a media player is playing. A new interval starts when the reason changes. |
 
-Never sent: window titles, application names, inhibitor app ids or reasons, URLs.
+Never sent: window titles, application names, inhibitor app ids or reasons, media player names, URLs.
 
 ### `browser.site` (interval)
 

@@ -45,7 +45,7 @@ Usage:
                                            pair with the server; the code is read from stdin
   beconscient-agent status                 show state, queue, last upload and sensors
   beconscient-agent replay --since DATE    re-send acknowledged events from DATE onward
-  beconscient-agent probe [--seconds N]    read-only D-Bus check: idle time, lock and inhibitor state
+  beconscient-agent probe [--seconds N]    read-only D-Bus check: idle time, lock, inhibitor and media state
   beconscient-agent version
 
 --dev accepts the public test-only server key (development only).
@@ -315,8 +315,9 @@ func runProbe(args []string) int {
 		ss, sserr := src.ScreenSaverActive()
 		lh, lherr := src.LockedHint()
 		inh, inherr := src.IdleInhibited()
-		fmt.Printf("%s idle=%s screensaver_active=%s locked_hint=%s idle_inhibited=%s\n",
-			time.Now().Format("15:04:05"), orErr(idle.Round(time.Millisecond), ierr), orErr(ss, sserr), orErr(lh, lherr), orErr(inh, inherr))
+		media, merr := src.MediaPlaying()
+		fmt.Printf("%s idle=%s screensaver_active=%s locked_hint=%s idle_inhibited=%s media_playing=%s\n",
+			time.Now().Format("15:04:05"), orErr(idle.Round(time.Millisecond), ierr), orErr(ss, sserr), orErr(lh, lherr), orErr(inh, inherr), orErr(media, merr))
 	}
 	show()
 	deadline := time.After(time.Duration(*seconds) * time.Second)
